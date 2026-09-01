@@ -24,24 +24,64 @@ The folder should stay structured like this:
 
 `MUTATR.app` expects `Backend/` to remain next to it in the same folder.
 
-## Quick start
+## Recommended installation
 
-1. Download or clone the `MUTATR` folder.
-2. Keep `MUTATR.app` and `Backend/` together.
-3. Make sure **Google Chrome** is installed in `/Applications`.
-4. Open `MUTATR.app`.
+Because MUTATR is not notarized through the paid Apple Developer Program,
+downloading GitHub's automatic ZIP can cause macOS or institutional security
+software to quarantine the app launcher. Cloning the repository avoids the
+GitHub ZIP issue and is the recommended installation method.
 
-On first launch, macOS may block the app because it is not notarized. If that happens:
+### Install with Codex or Claude
 
-1. Right-click `MUTATR.app`
-2. Click `Open`
-3. Confirm `Open`
+Open Codex or Claude Code on your Mac and paste the prompt below:
 
-If macOS still blocks it, go to:
+```text
+Please install and test MUTATR on this Mac from:
+https://github.com/ianmantel96/base-editing-guide-designer
 
-- `System Settings -> Privacy & Security`
+Please do the following:
+1. Confirm that this is a Mac and that Google Chrome is installed at
+   /Applications/Google Chrome.app.
+2. Clone the repository into ~/Applications/MUTATR. Create ~/Applications if
+   needed. If that destination already exists, do not overwrite it; inspect it
+   and update it safely instead.
+3. Confirm that MUTATR.app and Backend are next to each other.
+4. Confirm that MUTATR.app/Contents/MacOS/MUTATR is present and executable.
+5. Launch MUTATR.app.
+6. Allow the first-launch browser-helper setup to finish, then confirm that the
+   MUTATR local app server and automation helper are healthy.
+7. Tell me what you checked, what you changed, and whether MUTATR is ready.
 
-and allow the app to open.
+Do not change MUTATR workflow logic, scientific settings, or source code.
+```
+
+### Install manually with Git
+
+In Terminal, run:
+
+```bash
+mkdir -p "$HOME/Applications"
+git clone https://github.com/ianmantel96/base-editing-guide-designer.git "$HOME/Applications/MUTATR"
+open "$HOME/Applications/MUTATR/MUTATR.app"
+```
+
+Keep `MUTATR.app` and `Backend/` together. The first launch may take about a
+minute while MUTATR prepares its browser helper.
+
+### ZIP-download fallback
+
+If you must use **Code -> Download ZIP**, unzip it but do not open MUTATR yet.
+First remove the download quarantine from the entire unzipped folder:
+
+1. Open Terminal.
+2. Type `xattr -dr com.apple.quarantine `, including the trailing space.
+3. Drag the entire unzipped folder into Terminal.
+4. Press Return.
+5. Right-click `MUTATR.app` and choose **Open**.
+
+If the executable has already been removed, delete that download and start
+again. On an institution-managed Mac, local security software may still require
+your IT department to allow MUTATR.
 
 ## What MUTATR needs on your Mac
 
@@ -108,28 +148,6 @@ If the app opens but looks blank or stuck:
 1. Quit `MUTATR.app`
 2. Re-open it
 3. If needed, open **Settings** inside MUTATR and check runtime/automation status
-
-## Optional Codex setup prompt
-
-If you use Codex and want it to prepare your Mac to run MUTATR, you can paste this prompt:
-
-```text
-Please help me verify that MUTATR is set up correctly on this Mac.
-
-The MUTATR folder is here:
-[replace this line with the path to your downloaded MUTATR folder]
-
-Please do the following:
-1. Confirm that `MUTATR.app` and `Backend/` are both present and still next to each other.
-2. Confirm that Google Chrome exists at `/Applications/Google Chrome.app`.
-3. Check whether the local MUTATR runtime files look intact.
-4. Launch MUTATR from `MUTATR.app`.
-5. Confirm that the local app server and automation helper are healthy.
-6. If something obvious is missing or misconfigured, fix it if the fix is straightforward and safe.
-7. Then tell me exactly what you checked, what you changed if anything, and whether MUTATR is ready to use.
-
-Do not change any MUTATR workflow logic or scientific settings unless I explicitly ask.
-```
 
 ## Typical workflow
 
