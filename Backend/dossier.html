@@ -1,0 +1,1211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MUTATR Dossier</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --panel: #d7d7d7;
+      --panel-shadow: #7f7f7f;
+      --panel-highlight: #f7f7f7;
+      --green: #2f8a57;
+      --purple: #5d2f8e;
+      --yellow: #ffec59;
+      --ink: #111;
+      --muted: #40584e;
+      --soft: #eef5ef;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top, rgba(101, 210, 123, 0.18), transparent 24%),
+        linear-gradient(180deg, #123a22 0%, #102816 100%);
+      color: var(--ink);
+      font-family: "Trebuchet MS", Tahoma, Geneva, Verdana, sans-serif;
+      padding: 22px;
+    }
+
+    body.embedded {
+      min-height: auto;
+      background: transparent;
+      padding: 0;
+    }
+
+    .window {
+      width: min(1380px, 100%);
+      margin: 0 auto;
+      border: 2px solid #111;
+      background: var(--panel);
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 var(--panel-shadow),
+        0 20px 38px rgba(0,0,0,0.25);
+      overflow: clip;
+    }
+
+    .titlebar {
+      min-height: 42px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: linear-gradient(90deg, var(--purple) 0%, #2f8a57 100%);
+      color: white;
+      border-bottom: 2px solid #111;
+      font-weight: 700;
+    }
+
+    .titlebar a {
+      color: white;
+      text-decoration: none;
+      font-weight: 800;
+    }
+
+    body.embedded .titlebar {
+      display: none;
+    }
+
+    body.embedded .window {
+      width: 100%;
+      margin: 0;
+      border: 0;
+      box-shadow: none;
+      background: transparent;
+    }
+
+    body.embedded .shell {
+      padding: 0;
+    }
+
+    .shell {
+      padding: 18px;
+      display: grid;
+      gap: 18px;
+      background: linear-gradient(180deg, #d6e0d5 0%, #c5d4c3 100%);
+    }
+
+    .hero {
+      border: 2px solid #111;
+      background: #eef3ee;
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 #9ea8a1;
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .status-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    h1 {
+      color: var(--yellow);
+      font-family: "Courier New", Courier, monospace;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+      font-size: clamp(24px, 4vw, 40px);
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric {
+      border: 2px solid #111;
+      background: white;
+      padding: 10px;
+      display: grid;
+      gap: 4px;
+      min-height: 72px;
+    }
+
+    .metric span {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .metric b {
+      font-size: 16px;
+      overflow-wrap: anywhere;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tab-button,
+    .win-button {
+      appearance: none;
+      border: 2px solid #111;
+      background: var(--panel);
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 var(--panel-shadow);
+      min-height: 40px;
+      padding: 0 14px;
+      font-weight: 800;
+      cursor: pointer;
+      color: var(--ink);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tab-button.active {
+      background: #eadcf9;
+    }
+
+    .win-button.primary {
+      background: #d8f0de;
+    }
+
+    .win-button.secondary {
+      background: #eadcf9;
+    }
+
+    .tab-button:active,
+    .win-button:active {
+      box-shadow:
+        inset -2px -2px 0 var(--panel-highlight),
+        inset 2px 2px 0 var(--panel-shadow);
+      transform: translate(1px, 1px);
+    }
+
+    .panel {
+      border: 2px solid #111;
+      background: var(--soft);
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 #9ea8a1;
+      overflow: clip;
+    }
+
+    .panel-head {
+      padding: 10px 12px;
+      border-bottom: 2px solid #111;
+      background: linear-gradient(180deg, #dde8dc 0%, #ced9cd 100%);
+      font-weight: 800;
+    }
+
+    .panel-body {
+      padding: 14px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .panel-page[hidden] {
+      display: none;
+    }
+
+    .callout, textarea, .paper, .file-item, .note-box {
+      border: 2px solid #111;
+      background: white;
+      padding: 12px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 180px;
+      resize: vertical;
+      font: inherit;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 8px;
+      border: 2px solid #111;
+      background: #eef5ff;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .status-card {
+      border: 2px solid #111;
+      background: white;
+      padding: 10px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .status-card span {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .status-card b {
+      font-size: 16px;
+    }
+
+    .paper-list,
+    .file-list,
+    .timeline {
+      display: grid;
+      gap: 12px;
+    }
+
+    .paper h3,
+    .file-item h3 {
+      margin-bottom: 6px;
+      font-size: 17px;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .timeline-item {
+      border: 2px solid #111;
+      background: white;
+      padding: 10px 12px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .edit-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+    }
+
+    .span-12 { grid-column: span 12; }
+    .span-6 { grid-column: span 6; }
+    .span-4 { grid-column: span 4; }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-height: 38px;
+      border: 2px solid #111;
+      background: white;
+      color: var(--ink);
+      padding: 9px 10px;
+      font: inherit;
+    }
+
+    @media (max-width: 900px) {
+      .meta-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .status-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .meta-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .span-4,
+      .span-6,
+      .span-12 {
+        grid-column: span 12;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="window">
+    <div class="titlebar">
+      <span>MUTATR_DOSSIER.EXE</span>
+      <div class="actions">
+        <a href="explore.html">Directory</a>
+        <a href="new-mutation.html">New Mutation</a>
+      </div>
+    </div>
+    <div class="shell">
+      <section class="hero">
+        <div class="tags" id="heroTags"></div>
+        <h1 id="dossierTitle">No Dossier Selected</h1>
+        <p class="muted" id="dossierSubtitle">Open a mutation from the directory to make this its home base.</p>
+        <div class="meta-grid">
+          <div class="metric"><span>Gene</span><b id="geneMetric">-</b></div>
+          <div class="metric"><span>Mutation / codon</span><b id="mutationMetric">-</b></div>
+          <div class="metric"><span>Disease</span><b id="diseaseMetric">-</b></div>
+          <div class="metric"><span>Cell Type</span><b id="cellTypeMetric">-</b></div>
+        </div>
+        <div class="actions">
+          <button class="win-button secondary" id="openLiterature" type="button">Search Literature</button>
+          <button class="win-button primary" id="openDesign" type="button">Design CRISPR Strategy</button>
+          <button class="win-button" id="openBoth" type="button">Do Both</button>
+          <button class="win-button" id="editDetails" type="button">Edit Dossier Details</button>
+        </div>
+        <div class="status-row">
+          <div class="status-card"><span>Literature status</span><b id="literatureStatus">Not started</b></div>
+          <div class="status-card"><span>Design status</span><b id="designStatus">Not started</b></div>
+          <div class="status-card"><span>Editing strategy</span><b id="strategyStatus">Undecided</b></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">Mutation Hub</div>
+        <div class="panel-body">
+          <div class="tabs">
+            <button class="tab-button active" data-tab="overview" type="button">Overview</button>
+            <button class="tab-button" data-tab="literature" type="button">Literature</button>
+            <button class="tab-button" data-tab="design" type="button">Design</button>
+            <button class="tab-button" data-tab="files" type="button">Files</button>
+            <button class="tab-button" data-tab="notes" type="button">Notes</button>
+          </div>
+
+          <div class="panel-page" id="tab-overview">
+            <div class="callout" id="overviewBox">No dossier selected.</div>
+            <div class="panel">
+              <div class="panel-head">Edit Dossier Details</div>
+              <div class="panel-body">
+                <div class="edit-grid">
+                  <label class="span-4">Gene symbol
+                    <input id="editGene" placeholder="DNMT3A">
+                  </label>
+                  <label class="span-4">Mutation / codon target
+                    <input id="editMutation" placeholder="R882H or R882">
+                  </label>
+                  <label class="span-4">Target type
+                    <select id="editTargetType">
+                      <option value="mutation_codon">Mutation / codon</option>
+                      <option value="exon">Exon</option>
+                      <option value="protein_domain">Protein domain</option>
+                    </select>
+                  </label>
+                  <label class="span-4" id="editExonWrap" hidden>Exon target
+                    <select id="editExonTarget" disabled>
+                      <option value="">Load exon options first</option>
+                    </select>
+                  </label>
+                  <label class="span-4" id="editDomainWrap" hidden>Protein domain target
+                    <select id="editDomainTarget" disabled>
+                      <option value="">Load protein-domain options first</option>
+                    </select>
+                  </label>
+                  <label class="span-4">Species
+                    <select id="editSpecies">
+                      <option value="homo_sapiens">Human</option>
+                      <option value="mus_musculus">Mouse</option>
+                      <option value="rattus_norvegicus">Rat</option>
+                      <option value="danio_rerio">Zebrafish</option>
+                    </select>
+                  </label>
+                  <label class="span-4">Disease
+                    <input id="editDisease" placeholder="clonal hematopoiesis">
+                  </label>
+                  <label class="span-4">Cell type
+                    <input id="editCellType" placeholder="macrophage, B cell, T cell">
+                  </label>
+                  <label class="span-4">Inheritance context
+                    <select id="editInheritance">
+                      <option value="both">Somatic and germline</option>
+                      <option value="somatic">Somatic</option>
+                      <option value="germline">Germline</option>
+                    </select>
+                  </label>
+                  <label class="span-6">CRISPR editing strategy
+                    <select id="editEditingStrategy">
+                      <option value="auto_recommend">Auto / recommend best exact-edit strategy</option>
+                      <option value="base_editing">Base editing</option>
+                      <option value="prime_editing">Prime editing</option>
+                      <option value="nuclease_indel">Nuclease disruption / indel</option>
+                      <option value="paired_guide_deletion">Paired-guide deletion</option>
+                      <option value="undecided">Undecided</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="actions">
+                  <button class="win-button secondary" id="editLoadTargetOptions" type="button">Load Exons / Domains</button>
+                </div>
+                <div class="actions">
+                  <button class="win-button primary" id="saveDetails" type="button">Save Dossier Details</button>
+                </div>
+                <div class="callout" id="detailsStatus">Use this to fix metadata like disease, cell type, inheritance context, or editing strategy without recreating the dossier.</div>
+              </div>
+            </div>
+            <div class="timeline" id="timelineList"></div>
+          </div>
+
+          <div class="panel-page" id="tab-literature" hidden>
+            <div class="callout" id="literatureSummary">No literature saved yet.</div>
+            <div class="paper-list" id="literaturePapers"></div>
+          </div>
+
+          <div class="panel-page" id="tab-design" hidden>
+            <div class="callout" id="designSummary">No design saved yet.</div>
+            <div class="meta-grid">
+              <div class="metric"><span>Guide</span><b id="guideMetric">-</b></div>
+              <div class="metric"><span>Editor</span><b id="editorMetric">-</b></div>
+              <div class="metric"><span>PAM</span><b id="pamMetric">-</b></div>
+              <div class="metric"><span>Status</span><b id="statusMetric">-</b></div>
+            </div>
+          </div>
+
+          <div class="panel-page" id="tab-files" hidden>
+            <div class="callout">These are the files MUTATR expects for this mutation when a design exists.</div>
+            <div class="file-list" id="fileList"></div>
+          </div>
+
+          <div class="panel-page" id="tab-notes" hidden>
+            <textarea id="notesBox" placeholder="Mutation-specific notes, experimental ideas, caveats, reagent thoughts..."></textarea>
+            <div class="actions">
+              <button class="win-button primary" id="saveNotes" type="button">Save Notes</button>
+            </div>
+            <div class="callout" id="notesStatus">Notes are stored locally in this browser for this dossier.</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
+
+    const LIBRARY_KEY = "mutatrLibrary";
+    const OPEN_DOSSIER_KEY = "mutatrOpenDossier";
+    const CURRENT_DOSSIER_KEY = "mutatrCurrentDossier";
+    const DESIGNER_SEED_KEY = "mutatrDesignerSeed";
+    const FLOW_KEY = "mutatrWorkflowIntent";
+    const ENSEMBL_BASE = "https://rest.ensembl.org";
+    const TARGET_OPTIONS_CACHE_KEY = "mutatrTargetOptionsCacheV1";
+    const PAGE_PARAMS = new URLSearchParams(window.location.search);
+    const EMBEDDED = PAGE_PARAMS.get("embed") === "1";
+    const APP_VERSION = PAGE_PARAMS.get("v") || "2026-05-05-mutatr-reset-2";
+    const els = {};
+    document.querySelectorAll("[id]").forEach((el) => { els[el.id] = el; });
+    let activeDossier = null;
+    const editLookupState = {
+      transcriptId: "",
+      transcriptLabel: ""
+    };
+
+    function getLibrary() {
+      try {
+        const request = new XMLHttpRequest();
+        request.open("GET", "/api/library", false);
+        request.send();
+        if (request.status >= 200 && request.status < 300) {
+          const payload = JSON.parse(request.responseText || "{}");
+          const items = Array.isArray(payload.items) ? payload.items : [];
+          localStorage.setItem(LIBRARY_KEY, JSON.stringify(items));
+          return items;
+        }
+      } catch (error) {}
+      try {
+        return JSON.parse(localStorage.getItem(LIBRARY_KEY) || "[]");
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function setLibrary(items) {
+      localStorage.setItem(LIBRARY_KEY, JSON.stringify(items));
+      try {
+        const request = new XMLHttpRequest();
+        request.open("POST", "/api/library", false);
+        request.setRequestHeader("Content-Type", "application/json");
+        request.send(JSON.stringify({ items }));
+      } catch (error) {}
+    }
+
+    function clean(value) {
+      return (value || "").trim();
+    }
+
+    const geneticCode = {
+      TTT: "F", TTC: "F", TTA: "L", TTG: "L", TCT: "S", TCC: "S", TCA: "S", TCG: "S",
+      TAT: "Y", TAC: "Y", TAA: "*", TAG: "*", TGT: "C", TGC: "C", TGA: "*", TGG: "W",
+      CTT: "L", CTC: "L", CTA: "L", CTG: "L", CCT: "P", CCC: "P", CCA: "P", CCG: "P",
+      CAT: "H", CAC: "H", CAA: "Q", CAG: "Q", CGT: "R", CGC: "R", CGA: "R", CGG: "R",
+      ATT: "I", ATC: "I", ATA: "I", ATG: "M", ACT: "T", ACC: "T", ACA: "T", ACG: "T",
+      AAT: "N", AAC: "N", AAA: "K", AAG: "K", AGT: "S", AGC: "S", AGA: "R", AGG: "R",
+      GTT: "V", GTC: "V", GTA: "V", GTG: "V", GCT: "A", GCC: "A", GCA: "A", GCG: "A",
+      GAT: "D", GAC: "D", GAA: "E", GAG: "E", GGT: "G", GGC: "G", GGA: "G", GGG: "G"
+    };
+
+    const aa3 = {
+      ALA: "A", ARG: "R", ASN: "N", ASP: "D", CYS: "C", GLN: "Q", GLU: "E", GLY: "G",
+      HIS: "H", ILE: "I", LEU: "L", LYS: "K", MET: "M", PHE: "F", PRO: "P", SER: "S",
+      THR: "T", TRP: "W", TYR: "Y", VAL: "V", TER: "*", STOP: "*"
+    };
+
+    function safeUpper(value) {
+      return clean(value).toUpperCase();
+    }
+
+    function parseMutation(value) {
+      const raw = (value || "").trim().replace(/^p\./i, "").replace(/\s+/g, "");
+      let match = raw.match(/^([A-Za-z]{1})(\d+)([A-Za-z*]{1})$/);
+      if (match) return { refAa: match[1].toUpperCase(), aaPos: Number(match[2]), desiredAa: match[3].toUpperCase() };
+      match = raw.match(/^([A-Za-z]{1})(\d+)$/);
+      if (match) return { refAa: match[1].toUpperCase(), aaPos: Number(match[2]), desiredAa: null };
+      match = raw.match(/^([A-Za-z]{3})(\d+)([A-Za-z]{3}|Ter|Stop)$/i);
+      if (match) {
+        return {
+          refAa: aa3[match[1].toUpperCase()],
+          aaPos: Number(match[2]),
+          desiredAa: aa3[match[3].toUpperCase()]
+        };
+      }
+      match = raw.match(/^([A-Za-z]{3})(\d+)$/i);
+      if (match) {
+        return {
+          refAa: aa3[match[1].toUpperCase()],
+          aaPos: Number(match[2]),
+          desiredAa: null
+        };
+      }
+      return null;
+    }
+
+    function codonsForAa(aa) {
+      return Object.keys(geneticCode).filter((codon) => geneticCode[codon] === aa);
+    }
+
+    function isBaseEditableCodonSwap(refCodon, desiredCodon) {
+      const diffs = [];
+      for (let i = 0; i < 3; i += 1) {
+        if (refCodon[i] !== desiredCodon[i]) diffs.push(i);
+      }
+      if (diffs.length !== 1) return false;
+      const i = diffs[0];
+      const change = `${refCodon[i]}>${desiredCodon[i]}`;
+      return ["C>T", "A>G", "G>A", "T>C"].includes(change);
+    }
+
+    function recommendStrategyFromMutationInput(mutationText) {
+      const mutation = parseMutation(mutationText);
+      if (!mutation || !mutation.refAa || !mutation.desiredAa) {
+        return { strategy: "undecided", note: "No exact-edit recommendation yet because the mutation format could not be parsed." };
+      }
+      const refCodons = codonsForAa(mutation.refAa);
+      const desiredCodons = codonsForAa(mutation.desiredAa);
+      const basePossible = refCodons.some((refCodon) => desiredCodons.some((desiredCodon) => isBaseEditableCodonSwap(refCodon, desiredCodon)));
+      if (basePossible) {
+        return { strategy: "base_editing", note: "Provisional recommendation: base editing may be possible for at least one codon route. MUTATR will confirm after transcript/codon lookup." };
+      }
+      return { strategy: "prime_editing", note: "Provisional recommendation: prime editing is the safer exact-edit default because no obvious single-base base-editing route appears from the mutation notation alone." };
+    }
+
+    function recommendStrategyForTarget(targetType, targetText) {
+      if (targetType === "exon" || targetType === "protein_domain") {
+        return {
+          strategy: "nuclease_indel",
+          note: "Provisional recommendation: nuclease disruption / indel is the default starting lane for exon- and domain-level disruption targets."
+        };
+      }
+      return recommendStrategyFromMutationInput(targetText);
+    }
+
+    function dossierId(parts) {
+      const gene = safeUpper(parts.gene) || "GENE";
+      const mutation = safeUpper(parts.mutation).replace(/[^A-Z0-9.*-]+/g, "_");
+      return mutation ? `${gene}__${mutation}` : `${gene}__GENE`;
+    }
+
+    function dossierTitle(parts) {
+      const gene = clean(parts.gene) || "Gene";
+      const mutation = clean(parts.mutation);
+      return mutation ? `${gene} ${mutation}` : gene;
+    }
+
+    function currentEditTargetText() {
+      const type = els.editTargetType.value;
+      if (type === "exon") {
+        const raw = clean(els.editExonTarget.value);
+        return raw ? `Exon ${raw}` : "";
+      }
+      if (type === "protein_domain") {
+        return clean(els.editDomainTarget.value);
+      }
+      return clean(els.editMutation.value);
+    }
+
+    function renderEditTargetInputs() {
+      const type = els.editTargetType.value;
+      els.editExonWrap.hidden = type !== "exon";
+      els.editDomainWrap.hidden = type !== "protein_domain";
+    }
+
+    async function ensemblFetch(path) {
+      const response = await fetch(`${ENSEMBL_BASE}${path}`, { headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error(`Ensembl lookup failed (${response.status})`);
+      return response.json();
+    }
+
+    function setStructuredOptions(selectEl, placeholder, options, renderOption, preferred = "") {
+      const rows = [`<option value="">${placeholder}</option>`];
+      options.forEach((item) => rows.push(renderOption(item)));
+      selectEl.innerHTML = rows.join("");
+      selectEl.disabled = options.length === 0;
+      if (preferred && Array.from(selectEl.options).some((option) => option.value === preferred)) {
+        selectEl.value = preferred;
+      }
+    }
+
+    function readTargetOptionsCache() {
+      try {
+        return JSON.parse(localStorage.getItem(TARGET_OPTIONS_CACHE_KEY) || "{}");
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function writeTargetOptionsCache(cache) {
+      try {
+        localStorage.setItem(TARGET_OPTIONS_CACHE_KEY, JSON.stringify(cache));
+      } catch (error) {
+        // Ignore cache write failures so live lookup can still work.
+      }
+    }
+
+    function targetOptionsCacheKey(gene, species, type) {
+      return [clean(gene), clean(species || "homo_sapiens"), clean(type)].join("|").toLowerCase();
+    }
+
+    function getCachedTargetOptions(gene, species, type) {
+      const cache = readTargetOptionsCache();
+      const entry = cache[targetOptionsCacheKey(gene, species, type)];
+      if (!entry) return null;
+      const ageMs = Date.now() - Number(entry.savedAt || 0);
+      if (!Number.isFinite(ageMs) || ageMs > 1000 * 60 * 60 * 24 * 7) return null;
+      return entry;
+    }
+
+    function saveCachedTargetOptions(gene, species, type, payload) {
+      const cache = readTargetOptionsCache();
+      cache[targetOptionsCacheKey(gene, species, type)] = {
+        ...payload,
+        savedAt: Date.now()
+      };
+      writeTargetOptionsCache(cache);
+    }
+
+    async function loadEditTargetOptions() {
+      const gene = clean(els.editGene.value);
+      const targetType = els.editTargetType.value;
+      if (!gene || targetType === "mutation_codon") {
+        els.detailsStatus.textContent = targetType === "mutation_codon"
+          ? "Mutation / codon targets can be typed directly. Load structured target options only for exon or protein-domain targets."
+          : "Enter a gene first, then load structured target options.";
+        return;
+      }
+      els.editLoadTargetOptions.disabled = true;
+      els.editLoadTargetOptions.textContent = "Loading...";
+      try {
+        const species = els.editSpecies.value || "homo_sapiens";
+        const cached = getCachedTargetOptions(gene, species, targetType);
+        if (cached) {
+          editLookupState.transcriptId = cached.transcriptId || "";
+          editLookupState.transcriptLabel = cached.transcriptLabel || "";
+          if (targetType === "exon") {
+            setStructuredOptions(els.editExonTarget, "Select an exon", cached.options || [], (item) => `<option value="${item.value}">${item.label}</option>`, clean(els.editExonTarget.value));
+            if ((cached.options || []).length) els.editExonTarget.options[0].textContent = `Select an exon (${cached.options.length} loaded)`;
+            els.editExonTarget.value = clean(els.editExonTarget.value);
+            els.detailsStatus.textContent = `Loaded ${cached.options.length} cached exon option(s) for ${gene} using transcript ${editLookupState.transcriptLabel || "the saved transcript"}.`;
+          } else {
+            setStructuredOptions(els.editDomainTarget, (cached.options || []).length ? "Select a protein domain" : "No annotated protein domains found", cached.options || [], (item) => `<option value="${item.value}">${item.label}</option>`, clean(els.editDomainTarget.value));
+            if ((cached.options || []).length) els.editDomainTarget.options[0].textContent = `Select a protein domain (${cached.options.length} loaded)`;
+            els.editDomainTarget.value = clean(els.editDomainTarget.value);
+            els.detailsStatus.textContent = (cached.options || []).length
+              ? `Loaded ${cached.options.length} cached protein-domain option(s) for ${gene} using transcript ${editLookupState.transcriptLabel || "the saved transcript"}.`
+              : `No annotated protein domains were cached for ${gene}.`;
+          }
+          return;
+        }
+        const geneData = await ensemblFetch(`/lookup/symbol/${encodeURIComponent(species)}/${encodeURIComponent(gene)}?expand=1`);
+        const transcripts = (geneData.Transcript || [])
+          .filter((tx) => tx.biotype === "protein_coding" && tx.Translation && tx.Translation.id)
+          .sort((a, b) => Number(Boolean(b.is_canonical)) - Number(Boolean(a.is_canonical)));
+        if (!transcripts.length) throw new Error(`No protein-coding transcript with a translated product was found for ${gene}.`);
+        const transcript = transcripts[0];
+        editLookupState.transcriptId = transcript.id || "";
+        editLookupState.transcriptLabel = transcript.display_name || transcript.id || "";
+        if (targetType === "exon") {
+          const options = (transcript.Exon || []).map((exon, index) => ({
+            value: String(index + 1),
+            label: `Exon ${index + 1}${exon.id ? ` · ${exon.id}` : ""}`
+          }));
+          saveCachedTargetOptions(gene, species, targetType, {
+            transcriptId: editLookupState.transcriptId,
+            transcriptLabel: editLookupState.transcriptLabel,
+            options
+          });
+          setStructuredOptions(els.editExonTarget, "Select an exon", options, (item) => `<option value="${item.value}">${item.label}</option>`, clean(els.editExonTarget.value));
+          els.editExonTarget.options[0].textContent = `Select an exon (${options.length} loaded)`;
+          els.editExonTarget.value = clean(els.editExonTarget.value);
+          els.detailsStatus.textContent = `Loaded ${options.length} exon option(s) for ${gene} using transcript ${editLookupState.transcriptLabel}.`;
+        } else {
+          const features = await ensemblFetch(`/overlap/translation/${encodeURIComponent(transcript.Translation.id)}?feature=protein_feature`);
+          const options = (features || [])
+            .filter((feature) => clean(feature.description || feature.interpro_description || feature.logic_name))
+            .map((feature) => {
+              const label = clean(feature.description || feature.interpro_description || feature.logic_name);
+              return { value: label, label: `${label}${feature.start && feature.end ? ` (${feature.start}-${feature.end})` : ""}` };
+            })
+            .filter((item, index, arr) => arr.findIndex((other) => other.value === item.value) === index);
+          saveCachedTargetOptions(gene, species, targetType, {
+            transcriptId: editLookupState.transcriptId,
+            transcriptLabel: editLookupState.transcriptLabel,
+            options
+          });
+          setStructuredOptions(els.editDomainTarget, options.length ? "Select a protein domain" : "No annotated protein domains found", options, (item) => `<option value="${item.value}">${item.label}</option>`, clean(els.editDomainTarget.value));
+          if (options.length) els.editDomainTarget.options[0].textContent = `Select a protein domain (${options.length} loaded)`;
+          els.editDomainTarget.value = clean(els.editDomainTarget.value);
+          els.detailsStatus.textContent = options.length
+            ? `Loaded ${options.length} protein-domain option(s) for ${gene} using transcript ${editLookupState.transcriptLabel}.`
+            : `No annotated protein domains were found for ${gene} on ${editLookupState.transcriptLabel}.`;
+        }
+      } catch (error) {
+        els.detailsStatus.textContent = `Structured target lookup failed: ${error.message}`;
+      } finally {
+        els.editLoadTargetOptions.disabled = false;
+        els.editLoadTargetOptions.textContent = "Load Exons / Domains";
+      }
+    }
+
+    function projectNameFromDesign(record) {
+      const gene = (record.gene || "GENE").trim().replace(/[^A-Za-z0-9_.-]+/g, "_");
+      const mut = (record.mutation || "mutation").trim().replace(/[^A-Za-z0-9_.*-]+/g, "_");
+      return `${gene}_${mut}`;
+    }
+
+    function designerUrlForDossier(dossier) {
+      const params = new URLSearchParams();
+      params.set("dossierId", dossier.id);
+      params.set("gene", dossier.gene || "");
+      params.set("mutation", dossier.mutation || "");
+      params.set("species", dossier.species || "homo_sapiens");
+      params.set("editingStrategy", dossier.editingStrategy || "auto_recommend");
+      params.set("targetType", dossier.targetType || "mutation_codon");
+      if (dossier.exonTarget) params.set("exonTarget", dossier.exonTarget);
+      if (dossier.domainTarget) params.set("domainTarget", dossier.domainTarget);
+      params.set("v", APP_VERSION);
+      params.set("handoff", String(Date.now()));
+      return `designer.html?${params.toString()}`;
+    }
+
+    function setTab(name) {
+      document.querySelectorAll(".tab-button").forEach((button) => {
+        button.classList.toggle("active", button.dataset.tab === name);
+      });
+      document.querySelectorAll(".panel-page").forEach((page) => {
+        page.hidden = page.id !== `tab-${name}`;
+      });
+    }
+
+    function openDossierView(target) {
+      if (!activeDossier) return;
+      if (target === "library") {
+        localStorage.setItem(OPEN_DOSSIER_KEY, JSON.stringify({ id: activeDossier.id, source: "dossier-library-page" }));
+        localStorage.setItem(CURRENT_DOSSIER_KEY, activeDossier.id);
+        window.top.location.href = `explore.html?dossierId=${encodeURIComponent(activeDossier.id)}`;
+        return;
+      }
+      if (target === "designer") {
+        const params = new URLSearchParams();
+        params.set("dossierId", activeDossier.id);
+        params.set("gene", activeDossier.gene || "");
+        params.set("mutation", activeDossier.mutation || "");
+        params.set("species", activeDossier.species || "homo_sapiens");
+        params.set("editingStrategy", activeDossier.editingStrategy || "auto_recommend");
+        params.set("targetType", activeDossier.targetType || "mutation_codon");
+        if (activeDossier.exonTarget) params.set("exonTarget", activeDossier.exonTarget);
+        if (activeDossier.domainTarget) params.set("domainTarget", activeDossier.domainTarget);
+        params.set("handoff", String(Date.now()));
+        localStorage.setItem(OPEN_DOSSIER_KEY, JSON.stringify({ id: activeDossier.id, source: "dossier-direct-page" }));
+        localStorage.setItem(CURRENT_DOSSIER_KEY, activeDossier.id);
+        localStorage.setItem(DESIGNER_SEED_KEY, JSON.stringify(activeDossier));
+        window.top.location.href = `designer.html?${params.toString()}`;
+        return;
+      }
+      if (EMBEDDED && window.top && window.top !== window) {
+        try {
+          window.top.__mutatrPendingDossier = activeDossier;
+          if (typeof window.top.stashDossierForView === "function") {
+            window.top.stashDossierForView(target, activeDossier, "embedded-direct");
+          }
+          if (typeof window.top.openView === "function") {
+            window.top.openView(target);
+            return;
+          }
+        } catch (error) {
+          // Fall through to postMessage and location-based navigation if direct parent access fails.
+        }
+        window.top.postMessage({
+          type: "mutatr-open-view",
+          view: target,
+          dossier: activeDossier
+        }, "*");
+        return;
+      }
+      localStorage.setItem(OPEN_DOSSIER_KEY, JSON.stringify({ id: activeDossier.id, source: "dossier" }));
+      localStorage.setItem(CURRENT_DOSSIER_KEY, activeDossier.id);
+      if (target === "designer") {
+        localStorage.setItem(DESIGNER_SEED_KEY, JSON.stringify(activeDossier));
+      }
+      window.top.location.href = target === "library" ? "explore.html" : "mutatr.html";
+    }
+
+    function beginBothWorkflow() {
+      if (!activeDossier) return;
+      localStorage.setItem(OPEN_DOSSIER_KEY, JSON.stringify({ id: activeDossier.id, source: "dossier-both" }));
+      localStorage.setItem(CURRENT_DOSSIER_KEY, activeDossier.id);
+      localStorage.setItem(FLOW_KEY, JSON.stringify({
+        id: activeDossier.id,
+        intent: "both",
+        startedAt: new Date().toISOString()
+      }));
+      window.top.location.href = `explore.html?dossierId=${encodeURIComponent(activeDossier.id)}`;
+    }
+
+    function renderFiles(dossier) {
+      if (!dossier || !dossier.design || !dossier.design.record) {
+        els.fileList.innerHTML = '<div class="callout">No design export bundle exists yet.</div>';
+        return;
+      }
+      const record = dossier.design.record;
+      const prefix = projectNameFromDesign(record);
+      const status = record.orderReady ? "order_ready" : "draft";
+      const files = [
+        `${prefix}_01_design_summary_${status}.md`,
+        `${prefix}_02_order_sheet_${status}.csv`,
+        `${prefix}_03_guides.fasta`,
+        `${prefix}_04_benchling_context.gb`,
+        `${prefix}_05_be_designer_crosscheck.txt`,
+        `${prefix}_06_project_record.json`,
+        `${prefix}_07_vendor_or_core_inquiry.txt`,
+        `${prefix}_08_mutatr_workbook.xls`
+      ];
+      els.fileList.innerHTML = files.map((name) => `
+        <article class="file-item">
+          <h3>${name}</h3>
+          <div class="muted">Generated from the saved design workflow for this mutation.</div>
+        </article>
+      `).join("");
+    }
+
+    function renderDossier() {
+      const dossier = activeDossier;
+      if (!dossier) {
+        els.heroTags.innerHTML = '<span class="tag">No dossier loaded</span>';
+        els.timelineList.innerHTML = "";
+        els.editGene.value = "";
+        els.editMutation.value = "";
+        els.editTargetType.value = "mutation_codon";
+        els.editSpecies.value = "homo_sapiens";
+        els.editDisease.value = "";
+        els.editCellType.value = "";
+        els.editInheritance.value = "both";
+        els.editEditingStrategy.value = "auto_recommend";
+        renderEditTargetInputs();
+        return;
+      }
+
+      els.dossierTitle.textContent = dossier.title || `${dossier.gene || "Gene"} ${dossier.mutation || ""}`.trim();
+      els.dossierSubtitle.textContent = `Mutation hub · ${dossier.inheritance || "both"} context${dossier.species ? ` · ${dossier.species}` : ""}${dossier.updatedAt ? ` · updated ${new Date(dossier.updatedAt).toLocaleString()}` : ""}`;
+      els.geneMetric.textContent = dossier.gene || "-";
+      els.mutationMetric.textContent = dossier.mutation || "-";
+      els.diseaseMetric.textContent = dossier.disease || "-";
+      els.cellTypeMetric.textContent = dossier.cellType || "-";
+      els.heroTags.innerHTML = `
+        <span class="tag">${dossier.literature ? "Literature ready" : "No literature yet"}</span>
+        <span class="tag">${dossier.design ? "Design ready" : "No design yet"}</span>
+        ${dossier.species ? `<span class="tag">${dossier.species}</span>` : ""}
+        ${dossier.cellType ? `<span class="tag">${dossier.cellType}</span>` : ""}
+        ${dossier.targetType ? `<span class="tag">${dossier.targetType.replace(/_/g, " ")}</span>` : ""}
+        ${dossier.editingStrategy ? `<span class="tag">${dossier.editingStrategy.replace(/_/g, " ")}</span>` : ""}
+      `;
+      els.literatureStatus.textContent = dossier.literature ? "Saved" : "Not started";
+      els.designStatus.textContent = dossier.design ? (dossier.design.orderReady ? "Order-ready" : "In progress") : "Not started";
+      els.strategyStatus.textContent = dossier.editingStrategy ? dossier.editingStrategy.replace(/_/g, " ") : "Undecided";
+
+      els.overviewBox.textContent = dossier.literature
+        ? `This mutation hub already has literature saved.\n\n${dossier.literature.summary}`
+        : dossier.design
+          ? `This mutation hub already has CRISPR design work saved for ${els.dossierTitle.textContent}. Use the Design tab to review the selected guide and editor, or Search Literature to complete the other side of the dossier.`
+          : "This mutation hub exists, but neither literature nor design content has been saved yet. Use the buttons above to search literature, design a CRISPR strategy, or do both from this same mutation record.";
+      const timeline = [];
+      if (dossier.createdAt) timeline.push({ label: "Dossier created", time: dossier.createdAt, text: "Mutation dossier first entered into the MUTATR directory." });
+      if (dossier.literature && dossier.literature.savedAt) timeline.push({ label: "Literature saved", time: dossier.literature.savedAt, text: `${(dossier.literature.papers || []).length} paper(s) attached to this dossier.` });
+      if (dossier.design && dossier.design.savedAt) timeline.push({ label: "Design saved", time: dossier.design.savedAt, text: dossier.design.record && dossier.design.record.selectedGuide ? `Guide ${dossier.design.record.selectedGuide.guideSeq} saved with editor ${dossier.design.record.editorRecommendation.construct}.` : "Design workflow saved." });
+      if (dossier.notes && dossier.updatedAt) timeline.push({ label: "Notes updated", time: dossier.updatedAt, text: "Mutation notes were updated in this dossier." });
+      els.timelineList.innerHTML = timeline.length
+        ? timeline.sort((a, b) => new Date(b.time) - new Date(a.time)).map((item) => `
+            <article class="timeline-item">
+              <b>${item.label}</b>
+              <span class="muted">${new Date(item.time).toLocaleString()}</span>
+              <span>${item.text}</span>
+            </article>
+          `).join("")
+        : '<div class="callout">No timeline entries yet.</div>';
+
+      if (dossier.literature) {
+        els.literatureSummary.textContent = dossier.literature.summary || "No literature summary saved yet.";
+        els.literaturePapers.innerHTML = (dossier.literature.papers || []).length
+          ? dossier.literature.papers.map((paper) => `
+              <article class="paper">
+                <h3><a href="${paper.url}" target="_blank" rel="noreferrer">${paper.title}</a></h3>
+                <div class="muted">${paper.snippet || ""}</div>
+              </article>
+            `).join("")
+          : '<div class="callout">No saved papers in this dossier.</div>';
+      } else {
+        els.literatureSummary.textContent = "No literature saved yet.";
+        els.literaturePapers.innerHTML = '<div class="callout">Open the literature workspace to search and save papers for this mutation.</div>';
+      }
+
+      if (dossier.design && dossier.design.record) {
+        const record = dossier.design.record;
+        els.designSummary.textContent = `${record.selectedRoute ? `${record.selectedRoute.refCodon} to ${record.selectedRoute.desiredCodon}; ${record.selectedRoute.codingChange}. ` : ""}${record.editorRecommendation ? record.editorRecommendation.notes : "No editor recommendation saved."}`;
+        els.guideMetric.textContent = record.selectedGuide ? record.selectedGuide.guideSeq : "-";
+        els.editorMetric.textContent = record.editorRecommendation ? record.editorRecommendation.construct : "-";
+        els.pamMetric.textContent = record.selectedGuide ? record.selectedGuide.pam : "-";
+        els.statusMetric.textContent = record.orderReady ? "Order-ready" : "Draft";
+      } else {
+        els.designSummary.textContent = "No design saved yet.";
+        els.guideMetric.textContent = "-";
+        els.editorMetric.textContent = "-";
+        els.pamMetric.textContent = "-";
+        els.statusMetric.textContent = "-";
+      }
+
+      els.notesBox.value = dossier.notes || "";
+      els.editGene.value = dossier.gene || "";
+      els.editMutation.value = dossier.mutation || "";
+      els.editTargetType.value = dossier.targetType || "mutation_codon";
+      els.editSpecies.value = dossier.species || "homo_sapiens";
+      els.editDisease.value = dossier.disease || "";
+      els.editCellType.value = dossier.cellType || "";
+      els.editInheritance.value = dossier.inheritance || "both";
+      els.editEditingStrategy.value = dossier.editingStrategy || "auto_recommend";
+      if (els.editExonTarget) {
+        const exonValue = dossier.exonTarget || "";
+        els.editExonTarget.innerHTML = exonValue ? `<option value="${exonValue}">Exon ${exonValue} (current target)</option>` : '<option value="">Load exon options first</option>';
+        els.editExonTarget.value = exonValue;
+        els.editExonTarget.disabled = !exonValue;
+      }
+      if (els.editDomainTarget) {
+        const domainValue = dossier.domainTarget || "";
+        els.editDomainTarget.innerHTML = domainValue ? `<option value="${domainValue}">${domainValue} (current target)</option>` : '<option value="">Load protein-domain options first</option>';
+        els.editDomainTarget.value = domainValue;
+        els.editDomainTarget.disabled = !domainValue;
+      }
+      renderEditTargetInputs();
+      renderFiles(dossier);
+    }
+
+    function saveDetails() {
+      if (!activeDossier) return;
+      const hadCoreChange = activeDossier.gene !== clean(els.editGene.value)
+        || activeDossier.mutation !== currentEditTargetText()
+        || (activeDossier.species || "homo_sapiens") !== els.editSpecies.value
+        || (activeDossier.editingStrategy || "undecided") !== els.editEditingStrategy.value;
+      const targetType = els.editTargetType.value;
+      const targetText = currentEditTargetText();
+      const recommendation = els.editEditingStrategy.value === "auto_recommend"
+        ? recommendStrategyForTarget(targetType, targetText)
+        : { strategy: els.editEditingStrategy.value, note: "" };
+      const next = {
+        gene: clean(els.editGene.value),
+        mutation: targetText,
+        species: els.editSpecies.value,
+        disease: clean(els.editDisease.value),
+        cellType: clean(els.editCellType.value),
+        inheritance: els.editInheritance.value,
+        editingStrategy: recommendation.strategy,
+        targetType,
+        targetInput: targetText,
+        exonTarget: targetType === "exon" ? clean(els.editExonTarget.value) : "",
+        domainTarget: targetType === "protein_domain" ? clean(els.editDomainTarget.value) : ""
+      };
+      if (!next.gene) {
+        els.detailsStatus.textContent = "Gene symbol is required.";
+        return;
+      }
+
+      const library = getLibrary();
+      const oldIndex = library.findIndex((item) => item.id === activeDossier.id);
+      if (oldIndex < 0) return;
+      const existing = library[oldIndex];
+      const nextId = dossierId(next);
+      const conflictIndex = library.findIndex((item, index) => item.id === nextId && index !== oldIndex);
+      if (conflictIndex >= 0) {
+        els.detailsStatus.textContent = "A dossier with that gene and mutation already exists. Open that one or change the entry before saving.";
+        return;
+      }
+
+      const updated = {
+        ...existing,
+        id: nextId,
+        title: dossierTitle(next),
+        gene: next.gene,
+        mutation: next.mutation,
+        species: next.species,
+        disease: next.disease,
+        cellType: next.cellType,
+        inheritance: next.inheritance,
+        editingStrategy: next.editingStrategy,
+        targetType: next.targetType,
+        targetInput: next.targetInput,
+        exonTarget: next.exonTarget,
+        domainTarget: next.domainTarget,
+        updatedAt: new Date().toISOString()
+      };
+
+      if (updated.literature) {
+        updated.literature = {
+          ...updated.literature,
+          gene: next.gene,
+          mutation: next.mutation,
+          species: next.species,
+          disease: next.disease,
+          cellType: next.cellType,
+          inheritance: next.inheritance,
+          targetType: next.targetType,
+          targetInput: next.targetInput,
+          exonTarget: next.exonTarget,
+          domainTarget: next.domainTarget
+        };
+      }
+
+      if (updated.design && updated.design.record) {
+        updated.design = {
+          ...updated.design,
+          orderReady: hadCoreChange ? false : updated.design.orderReady,
+          record: {
+            ...updated.design.record,
+            gene: next.gene,
+            mutation: next.mutation,
+            species: next.species,
+            editingStrategy: next.editingStrategy,
+            targetType: next.targetType,
+            exonTarget: next.exonTarget,
+            domainTarget: next.domainTarget,
+            orderReady: hadCoreChange ? false : updated.design.record.orderReady
+          }
+        };
+      }
+
+      library.splice(oldIndex, 1);
+      library.unshift(updated);
+      setLibrary(library);
+      activeDossier = updated;
+      localStorage.setItem(OPEN_DOSSIER_KEY, JSON.stringify({ id: updated.id, source: "dossier-edit" }));
+      localStorage.setItem(CURRENT_DOSSIER_KEY, updated.id);
+      els.detailsStatus.textContent = hadCoreChange
+        ? "Dossier details saved. Literature and design metadata were updated, and any saved CRISPR design was marked not order-ready so you can review it against the corrected entry."
+        : "Dossier details saved. Literature and design metadata were updated to match this corrected entry.";
+      renderDossier();
+    }
+
+    function saveNotes() {
+      if (!activeDossier) return;
+      const library = getLibrary();
+      const index = library.findIndex((item) => item.id === activeDossier.id);
+      if (index < 0) return;
+      library[index] = {
+        ...library[index],
+        notes: els.notesBox.value,
+        updatedAt: new Date().toISOString()
+      };
+      activeDossier = library[index];
+      setLibrary(library);
+      els.notesStatus.textContent = "Notes saved to this dossier in the local MUTATR library.";
+      renderDossier();
+    }
+
+    function boot() {
+      const queryDossierId = clean(PAGE_PARAMS.get("dossierId") || "");
+      try {
+        if (queryDossierId) {
+          activeDossier = getLibrary().find((item) => item.id === queryDossierId) || null;
+        } else {
+          const pending = JSON.parse(localStorage.getItem(OPEN_DOSSIER_KEY) || "null");
+          if (pending && pending.id) {
+          activeDossier = getLibrary().find((item) => item.id === pending.id) || null;
+          } else {
+            const currentId = localStorage.getItem(CURRENT_DOSSIER_KEY);
+            activeDossier = (currentId && getLibrary().find((item) => item.id === currentId)) || getLibrary()[0] || null;
+          }
+        }
+      } catch (error) {
+        activeDossier = (queryDossierId && getLibrary().find((item) => item.id === queryDossierId)) || getLibrary()[0] || null;
+      }
+      if (activeDossier && activeDossier.id) {
+        localStorage.setItem(CURRENT_DOSSIER_KEY, activeDossier.id);
+      }
+      renderDossier();
+      setTab("overview");
+    }
+
+    document.addEventListener("click", (event) => {
+      const tab = event.target.closest("[data-tab]");
+      if (tab) setTab(tab.dataset.tab);
+    });
+
+    els.openLiterature.addEventListener("click", () => openDossierView("library"));
+    els.openDesign.addEventListener("click", () => {
+      if (!activeDossier) return;
+      localStorage.setItem(CURRENT_DOSSIER_KEY, activeDossier.id);
+      window.top.location.assign(designerUrlForDossier(activeDossier));
+    });
+    els.openBoth.addEventListener("click", beginBothWorkflow);
+    els.editDetails.addEventListener("click", () => setTab("overview"));
+    els.editTargetType.addEventListener("change", renderEditTargetInputs);
+    els.editLoadTargetOptions.addEventListener("click", loadEditTargetOptions);
+    els.saveDetails.addEventListener("click", saveDetails);
+    els.saveNotes.addEventListener("click", saveNotes);
+
+    boot();
+    if (EMBEDDED) {
+      document.body.classList.add("embedded");
+    }
+  </script>
+</body>
+</html>

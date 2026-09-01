@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MUTATR Mutation Intake</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --panel: #d7d7d7;
+      --panel-shadow: #7f7f7f;
+      --panel-highlight: #f7f7f7;
+      --green: #2f8a57;
+      --purple: #5d2f8e;
+      --ink: #111;
+      --muted: #40584e;
+      --soft: #eef5ef;
+      --yellow: #ffec59;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top, rgba(101, 210, 123, 0.18), transparent 24%),
+        linear-gradient(180deg, #123a22 0%, #102816 100%);
+      color: var(--ink);
+      font-family: "Trebuchet MS", Tahoma, Geneva, Verdana, sans-serif;
+      padding: 22px;
+    }
+
+    body.embedded {
+      min-height: auto;
+      background: transparent;
+      padding: 0;
+    }
+
+    .window {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      border: 2px solid #111;
+      background: var(--panel);
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 var(--panel-shadow),
+        0 20px 38px rgba(0,0,0,0.25);
+      overflow: clip;
+    }
+
+    .titlebar {
+      min-height: 42px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: linear-gradient(90deg, var(--purple) 0%, #2f8a57 100%);
+      color: white;
+      border-bottom: 2px solid #111;
+      font-weight: 700;
+    }
+
+    .titlebar a {
+      color: white;
+      text-decoration: none;
+      font-weight: 800;
+    }
+
+    body.embedded .titlebar {
+      display: none;
+    }
+
+    body.embedded .window {
+      width: 100%;
+      margin: 0;
+      border: 0;
+      box-shadow: none;
+      background: transparent;
+    }
+
+    body.embedded .shell {
+      padding: 0;
+    }
+
+    .shell {
+      padding: 18px;
+      display: grid;
+      gap: 18px;
+      background: linear-gradient(180deg, #d6e0d5 0%, #c5d4c3 100%);
+    }
+
+    .hero {
+      border: 2px solid #111;
+      background: #eef3ee;
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 #9ea8a1;
+      padding: 18px;
+      display: grid;
+      gap: 10px;
+    }
+
+    h1, h2, p { margin: 0; }
+
+    h1 {
+      color: var(--yellow);
+      font-family: "Courier New", Courier, monospace;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+      font-size: clamp(24px, 4vw, 38px);
+    }
+
+    .panel {
+      border: 2px solid #111;
+      background: var(--soft);
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 #9ea8a1;
+      overflow: clip;
+    }
+
+    .panel-head {
+      padding: 10px 12px;
+      border-bottom: 2px solid #111;
+      background: linear-gradient(180deg, #dde8dc 0%, #ced9cd 100%);
+      font-weight: 800;
+    }
+
+    .panel-body {
+      padding: 14px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+    }
+
+    .span-12 { grid-column: span 12; }
+    .span-6 { grid-column: span 6; }
+    .span-4 { grid-column: span 4; }
+    .target-row {
+      grid-column: span 12;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      align-items: start;
+    }
+    .target-note-box {
+      min-height: 76px;
+      display: grid;
+      align-content: center;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    input, select, button, textarea {
+      font: inherit;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      min-height: 38px;
+      border: 2px solid #111;
+      background: white;
+      color: var(--ink);
+      padding: 9px 10px;
+    }
+
+    textarea {
+      min-height: 88px;
+      resize: vertical;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .actions.stack-mobile {
+      align-items: center;
+    }
+
+    .win-button {
+      appearance: none;
+      border: 2px solid #111;
+      background: var(--panel);
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 var(--panel-shadow);
+      min-height: 40px;
+      padding: 0 14px;
+      font-weight: 800;
+      cursor: pointer;
+      color: var(--ink);
+    }
+
+    .win-button.primary { background: #d8f0de; }
+    .win-button.secondary { background: #eadcf9; }
+    .win-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .callout {
+      border: 2px solid #111;
+      background: white;
+      padding: 12px;
+      white-space: pre-wrap;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    @media (max-width: 820px) {
+      .span-4, .span-6, .span-12 { grid-column: span 12; }
+      .target-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="window">
+    <div class="titlebar">
+      <span>MUTATR_MUTATION_INTAKE.EXE</span>
+      <div class="actions">
+        <a href="mutatr.html">Home</a>
+        <a href="explore.html">Directory</a>
+      </div>
+    </div>
+    <div class="shell">
+      <section class="hero">
+        <h1>Mutation Intake</h1>
+        <p>Enter the mutation or codon target once, create the dossier immediately, and let the mutation hub handle what happens next.</p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">Mutation Intake</div>
+        <div class="panel-body">
+          <div class="grid">
+            <label class="span-4">Gene symbol
+              <input id="gene" placeholder="DNMT3A">
+            </label>
+            <label class="span-4">Target type
+              <select id="targetType">
+                <option value="mutation_codon">Mutation / codon</option>
+                <option value="exon">Exon</option>
+                <option value="protein_domain">Protein domain</option>
+              </select>
+            </label>
+            <label class="span-4">Species
+              <select id="species">
+                <option value="homo_sapiens">Human</option>
+                <option value="mus_musculus">Mouse</option>
+                <option value="rattus_norvegicus">Rat</option>
+                <option value="danio_rerio">Zebrafish</option>
+              </select>
+            </label>
+            <div class="target-row">
+              <label id="loadTargetWrap">Target options
+                <button class="win-button secondary" id="loadTargetOptions" type="button">Load Exons / Domains</button>
+              </label>
+              <div>
+                <label id="mutationWrap">Mutation / codon target
+                  <input id="mutation" placeholder="R882H or R882">
+                </label>
+                <label id="exonWrap" hidden>Exon target
+                  <select id="exonTarget" disabled>
+                    <option value="">Load exon options first</option>
+                  </select>
+                </label>
+                <label id="domainWrap" hidden>Protein domain target
+                  <select id="domainTarget" disabled>
+                    <option value="">Load protein-domain options first</option>
+                  </select>
+                </label>
+              </div>
+              <div class="callout muted target-note-box" id="lookupSummary">Mutation / codon targets can be typed directly. Exon and protein-domain targets become dropdowns after gene lookup.</div>
+            </div>
+            <label class="span-4">Disease (optional)
+              <input id="disease" placeholder="clonal hematopoiesis">
+            </label>
+            <label class="span-4">Cell type (optional)
+              <input id="cellType" placeholder="macrophage, B cell, T cell">
+            </label>
+            <label class="span-4">Inheritance context
+              <select id="inheritance">
+                <option value="both">Somatic and germline</option>
+                <option value="somatic">Somatic</option>
+                <option value="germline">Germline</option>
+              </select>
+            </label>
+            <label class="span-6">CRISPR editing strategy
+              <select id="editingStrategy">
+                <option value="auto_recommend">Auto / recommend best exact-edit strategy</option>
+                <option value="base_editing">Base editing</option>
+                <option value="prime_editing">Prime editing</option>
+                <option value="nuclease_indel">Nuclease disruption / indel</option>
+                <option value="paired_guide_deletion">Paired-guide deletion</option>
+                <option value="undecided">Undecided</option>
+              </select>
+            </label>
+            <label class="span-6">Notes (optional)
+              <textarea id="notes" placeholder="Anything important about the mutation, system, or experiment goals."></textarea>
+            </label>
+          </div>
+          <div class="actions">
+            <button class="win-button primary" id="createAndHub" type="button">Create Mutation Hub</button>
+          </div>
+          <div class="callout" id="statusBox">Create the dossier first. MUTATR will open the mutation hub, where you can choose Search Literature, Design CRISPR Strategy, or Do Both from the same mutation record.</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const LIBRARY_KEY = "mutatrLibrary";
+    const OPEN_DOSSIER_KEY = "mutatrOpenDossier";
+    const EMBEDDED = new URLSearchParams(window.location.search).get("embed") === "1";
+    const ENSEMBL_BASE = "https://rest.ensembl.org";
+    const TARGET_OPTIONS_CACHE_KEY = "mutatrTargetOptionsCacheV1";
+    const els = {};
+    document.querySelectorAll("[id]").forEach((el) => { els[el.id] = el; });
+    const lookupState = {
+      exonOptions: [],
+      domainOptions: [],
+      transcriptId: "",
+      transcriptLabel: "",
+      translationId: ""
+    };
+
+    function clean(value) {
+      return (value || "").trim();
+    }
+
+    const geneticCode = {
+      TTT: "F", TTC: "F", TTA: "L", TTG: "L", TCT: "S", TCC: "S", TCA: "S", TCG: "S",
+      TAT: "Y", TAC: "Y", TAA: "*", TAG: "*", TGT: "C", TGC: "C", TGA: "*", TGG: "W",
+      CTT: "L", CTC: "L", CTA: "L", CTG: "L", CCT: "P", CCC: "P", CCA: "P", CCG: "P",
+      CAT: "H", CAC: "H", CAA: "Q", CAG: "Q", CGT: "R", CGC: "R", CGA: "R", CGG: "R",
+      ATT: "I", ATC: "I", ATA: "I", ATG: "M", ACT: "T", ACC: "T", ACA: "T", ACG: "T",
+      AAT: "N", AAC: "N", AAA: "K", AAG: "K", AGT: "S", AGC: "S", AGA: "R", AGG: "R",
+      GTT: "V", GTC: "V", GTA: "V", GTG: "V", GCT: "A", GCC: "A", GCA: "A", GCG: "A",
+      GAT: "D", GAC: "D", GAA: "E", GAG: "E", GGT: "G", GGC: "G", GGA: "G", GGG: "G"
+    };
+
+    const aa3 = {
+      ALA: "A", ARG: "R", ASN: "N", ASP: "D", CYS: "C", GLN: "Q", GLU: "E", GLY: "G",
+      HIS: "H", ILE: "I", LEU: "L", LYS: "K", MET: "M", PHE: "F", PRO: "P", SER: "S",
+      THR: "T", TRP: "W", TYR: "Y", VAL: "V", TER: "*", STOP: "*"
+    };
+
+    function safeUpper(value) {
+      return clean(value).toUpperCase();
+    }
+
+    function parseMutation(value) {
+      const raw = (value || "").trim().replace(/^p\./i, "").replace(/\s+/g, "");
+      let match = raw.match(/^([A-Za-z]{1})(\d+)([A-Za-z*]{1})$/);
+      if (match) return { refAa: match[1].toUpperCase(), aaPos: Number(match[2]), desiredAa: match[3].toUpperCase() };
+      match = raw.match(/^([A-Za-z]{1})(\d+)$/);
+      if (match) return { refAa: match[1].toUpperCase(), aaPos: Number(match[2]), desiredAa: null };
+      match = raw.match(/^([A-Za-z]{3})(\d+)([A-Za-z]{3}|Ter|Stop)$/i);
+      if (match) {
+        return {
+          refAa: aa3[match[1].toUpperCase()],
+          aaPos: Number(match[2]),
+          desiredAa: aa3[match[3].toUpperCase()]
+        };
+      }
+      match = raw.match(/^([A-Za-z]{3})(\d+)$/i);
+      if (match) {
+        return {
+          refAa: aa3[match[1].toUpperCase()],
+          aaPos: Number(match[2]),
+          desiredAa: null
+        };
+      }
+      return null;
+    }
+
+    function codonsForAa(aa) {
+      return Object.keys(geneticCode).filter((codon) => geneticCode[codon] === aa);
+    }
+
+    function isBaseEditableCodonSwap(refCodon, desiredCodon) {
+      const diffs = [];
+      for (let i = 0; i < 3; i += 1) {
+        if (refCodon[i] !== desiredCodon[i]) diffs.push(i);
+      }
+      if (diffs.length !== 1) return false;
+      const i = diffs[0];
+      const change = `${refCodon[i]}>${desiredCodon[i]}`;
+      return ["C>T", "A>G", "G>A", "T>C"].includes(change);
+    }
+
+    function recommendStrategyFromMutationInput(mutationText) {
+      const mutation = parseMutation(mutationText);
+      if (!mutation || !mutation.refAa || !mutation.desiredAa) {
+        return { strategy: "undecided", note: "No exact-edit recommendation yet because the mutation format could not be parsed." };
+      }
+      const refCodons = codonsForAa(mutation.refAa);
+      const desiredCodons = codonsForAa(mutation.desiredAa);
+      const basePossible = refCodons.some((refCodon) => desiredCodons.some((desiredCodon) => isBaseEditableCodonSwap(refCodon, desiredCodon)));
+      if (basePossible) {
+        return { strategy: "base_editing", note: "Provisional recommendation: base editing may be possible for at least one codon route. MUTATR will confirm after transcript/codon lookup." };
+      }
+      return { strategy: "prime_editing", note: "Provisional recommendation: prime editing is the safer exact-edit default because no obvious single-base base-editing route appears from the mutation notation alone." };
+    }
+
+    function recommendStrategyForIntake(targetType, targetText) {
+      if (targetType === "exon") {
+        return {
+          strategy: "nuclease_indel",
+          note: "Provisional recommendation: nuclease disruption / indel is the default starting lane for exon-targeted dossiers. You can still switch to paired-guide deletion or another CRISPR mode later."
+        };
+      }
+      if (targetType === "protein_domain") {
+        return {
+          strategy: "nuclease_indel",
+          note: "Provisional recommendation: nuclease disruption / indel is the default starting lane for protein-domain disruption. You can still switch to paired-guide deletion or another CRISPR mode later."
+        };
+      }
+      return recommendStrategyFromMutationInput(targetText);
+    }
+
+    function dossierId(parts) {
+      const gene = safeUpper(parts.gene) || "GENE";
+      const mutation = safeUpper(parts.mutation).replace(/[^A-Z0-9.*-]+/g, "_");
+      return mutation ? `${gene}__${mutation}` : `${gene}__TARGET`;
+    }
+
+    function dossierTitle(parts) {
+      const gene = clean(parts.gene) || "Gene";
+      const mutation = clean(parts.mutation);
+      return mutation ? `${gene} ${mutation}` : gene;
+    }
+
+    function usesStructuredTarget() {
+      return ["exon", "protein_domain"].includes(els.targetType.value);
+    }
+
+    function resetLookupState() {
+      lookupState.exonOptions = [];
+      lookupState.domainOptions = [];
+      lookupState.transcriptId = "";
+      lookupState.transcriptLabel = "";
+      lookupState.translationId = "";
+    }
+
+    function setSelectOptions(selectEl, placeholder, options, formatter) {
+      if (!selectEl) return;
+      const rows = [`<option value="">${placeholder}</option>`];
+      options.forEach((item) => {
+        rows.push(formatter(item));
+      });
+      selectEl.innerHTML = rows.join("");
+      selectEl.disabled = options.length === 0;
+    }
+
+    function readTargetOptionsCache() {
+      try {
+        return JSON.parse(localStorage.getItem(TARGET_OPTIONS_CACHE_KEY) || "{}");
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function writeTargetOptionsCache(cache) {
+      try {
+        localStorage.setItem(TARGET_OPTIONS_CACHE_KEY, JSON.stringify(cache));
+      } catch (error) {
+        // Ignore cache write failures so live lookup can still work.
+      }
+    }
+
+    function targetOptionsCacheKey(gene, species, type) {
+      return [clean(gene), clean(species || "homo_sapiens"), clean(type)].join("|").toLowerCase();
+    }
+
+    function getCachedTargetOptions(gene, species, type) {
+      const cache = readTargetOptionsCache();
+      const entry = cache[targetOptionsCacheKey(gene, species, type)];
+      if (!entry) return null;
+      const ageMs = Date.now() - Number(entry.savedAt || 0);
+      if (!Number.isFinite(ageMs) || ageMs > 1000 * 60 * 60 * 24 * 7) return null;
+      return entry;
+    }
+
+    function saveCachedTargetOptions(gene, species, type, payload) {
+      const cache = readTargetOptionsCache();
+      cache[targetOptionsCacheKey(gene, species, type)] = {
+        ...payload,
+        savedAt: Date.now()
+      };
+      writeTargetOptionsCache(cache);
+    }
+
+    function renderTargetInputs() {
+      const type = els.targetType.value;
+      els.mutationWrap.hidden = type !== "mutation_codon";
+      els.exonWrap.hidden = type !== "exon";
+      els.domainWrap.hidden = type !== "protein_domain";
+      els.loadTargetOptions.disabled = type === "mutation_codon";
+      if (type === "mutation_codon") {
+        els.lookupSummary.textContent = "Mutation / codon targets can be typed directly. Exon and protein-domain targets become dropdowns after gene lookup.";
+      } else if (type === "exon") {
+        els.lookupSummary.textContent = lookupState.exonOptions.length
+          ? `Choose an exon from ${lookupState.transcriptLabel || "the resolved transcript"} to make this dossier exon-specific for literature and CRISPR design.`
+          : "Load transcript options first, then choose the exon you want to disrupt or delete.";
+      } else {
+        els.lookupSummary.textContent = lookupState.domainOptions.length
+          ? `Choose a resolved protein feature from ${lookupState.transcriptLabel || "the resolved transcript"} to make this dossier domain-specific.`
+          : "Load protein-domain options first, then choose the domain you want to disrupt or delete.";
+      }
+    }
+
+    function currentTargetDisplay() {
+      const type = els.targetType.value;
+      if (type === "exon") {
+        const raw = clean(els.exonTarget.value);
+        return raw ? `Exon ${raw}` : "";
+      }
+      if (type === "protein_domain") {
+        return clean(els.domainTarget.value);
+      }
+      return clean(els.mutation.value);
+    }
+
+    async function fetchJson(path) {
+      const response = await fetch(`${ENSEMBL_BASE}${path}`, {
+        headers: { Accept: "application/json" }
+      });
+      if (!response.ok) {
+        throw new Error(`Ensembl lookup failed (${response.status})`);
+      }
+      return response.json();
+    }
+
+    async function loadTargetOptions() {
+      const gene = clean(els.gene.value);
+      const type = els.targetType.value;
+      if (!gene) {
+        els.statusBox.textContent = "Enter a gene symbol first, then load exons/domains for the current species.";
+        return;
+      }
+      if (type === "mutation_codon") {
+        els.statusBox.textContent = "Mutation / codon targets can be typed directly. Load structured options only for exon or protein-domain intake.";
+        return;
+      }
+      els.statusBox.textContent = `Loading ${type === "exon" ? "exon" : "protein-domain"} options from Ensembl...`;
+      try {
+        const species = els.species.value || "homo_sapiens";
+        const cached = getCachedTargetOptions(gene, species, type);
+        if (cached) {
+          lookupState.transcriptId = cached.transcriptId || "";
+          lookupState.translationId = cached.translationId || "";
+          lookupState.transcriptLabel = cached.transcriptLabel || "";
+          if (type === "exon") {
+            lookupState.exonOptions = cached.options || [];
+            setSelectOptions(els.exonTarget, "Select an exon", lookupState.exonOptions, (item) => `<option value="${item.value}">${item.label}</option>`);
+            els.statusBox.textContent = `Loaded ${lookupState.exonOptions.length} cached exon option(s) for ${gene} using transcript ${lookupState.transcriptLabel || "the saved transcript"}.`;
+          } else {
+            lookupState.domainOptions = cached.options || [];
+            setSelectOptions(els.domainTarget, lookupState.domainOptions.length ? "Select a protein domain" : "No annotated protein domains found", lookupState.domainOptions, (item) => `<option value="${item.value}">${item.label}</option>`);
+            els.statusBox.textContent = lookupState.domainOptions.length
+              ? `Loaded ${lookupState.domainOptions.length} cached protein-domain option(s) for ${gene} using transcript ${lookupState.transcriptLabel || "the saved transcript"}.`
+              : `No annotated protein domains were cached for ${gene}.`;
+          }
+          renderTargetInputs();
+          return;
+        }
+        const geneData = await fetchJson(`/lookup/symbol/${species}/${encodeURIComponent(gene)}?expand=1`);
+        const transcripts = (geneData.Transcript || [])
+          .filter((tx) => tx.biotype === "protein_coding" && tx.Translation && tx.Translation.id)
+          .sort((a, b) => {
+            const canonicalDelta = Number(Boolean(b.is_canonical)) - Number(Boolean(a.is_canonical));
+            if (canonicalDelta) return canonicalDelta;
+            return (Number(b.length) || 0) - (Number(a.length) || 0);
+          });
+        if (!transcripts.length) {
+          throw new Error(`No protein-coding transcript with a translated product was found for ${gene}.`);
+        }
+        const transcript = transcripts[0];
+        lookupState.transcriptId = transcript.id || "";
+        lookupState.translationId = transcript.Translation.id || "";
+        lookupState.transcriptLabel = transcript.display_name || transcript.id || "";
+        if (type === "exon") {
+          const exonOptions = (transcript.Exon || []).map((exon, index) => ({
+            value: String(index + 1),
+            label: `Exon ${index + 1}${exon.id ? ` · ${exon.id}` : ""}`
+          }));
+          lookupState.exonOptions = exonOptions;
+          saveCachedTargetOptions(gene, species, type, {
+            transcriptId: lookupState.transcriptId,
+            translationId: lookupState.translationId,
+            transcriptLabel: lookupState.transcriptLabel,
+            options: exonOptions
+          });
+          setSelectOptions(els.exonTarget, "Select an exon", exonOptions, (item) => `<option value="${item.value}">${item.label}</option>`);
+          els.exonTarget.options[0].textContent = `Select an exon (${exonOptions.length} loaded)`;
+          els.exonTarget.value = "";
+          els.statusBox.textContent = `Loaded ${gene} exon options from Ensembl using transcript ${lookupState.transcriptLabel}. ${exonOptions.length} exon option(s) are now available.`;
+        } else {
+          const features = await fetchJson(`/overlap/translation/${encodeURIComponent(transcript.Translation.id)}?feature=protein_feature`);
+          const domainOptions = (features || [])
+            .filter((feature) => clean(feature.description || feature.interpro_description || feature.logic_name))
+            .map((feature) => ({
+              value: clean(feature.description || feature.interpro_description || feature.logic_name),
+              label: `${clean(feature.description || feature.interpro_description || feature.logic_name)}${feature.start && feature.end ? ` (${feature.start}-${feature.end})` : ""}`
+            }))
+            .filter((item, index, arr) => arr.findIndex((other) => other.value === item.value) === index);
+          lookupState.domainOptions = domainOptions;
+          saveCachedTargetOptions(gene, species, type, {
+            transcriptId: lookupState.transcriptId,
+            translationId: lookupState.translationId,
+            transcriptLabel: lookupState.transcriptLabel,
+            options: domainOptions
+          });
+          setSelectOptions(els.domainTarget, domainOptions.length ? "Select a protein domain" : "No annotated protein domains found", domainOptions, (item) => `<option value="${item.value}">${item.label}</option>`);
+          if (domainOptions.length) {
+            els.domainTarget.options[0].textContent = `Select a protein domain (${domainOptions.length} loaded)`;
+          }
+          els.domainTarget.value = "";
+          els.statusBox.textContent = `Loaded ${gene} protein-domain options from Ensembl using transcript ${lookupState.transcriptLabel}. ${domainOptions.length} protein-domain option(s) are now available.`;
+        }
+        renderTargetInputs();
+      } catch (error) {
+        resetLookupState();
+        setSelectOptions(els.exonTarget, "Load exon options first", [], () => "");
+        setSelectOptions(els.domainTarget, "Load protein-domain options first", [], () => "");
+        renderTargetInputs();
+        els.statusBox.textContent = `Target-option lookup failed: ${error.message}`;
+      }
+    }
+
+    function getLibrary() {
+      try {
+        const request = new XMLHttpRequest();
+        request.open("GET", "/api/library", false);
+        request.send();
+        if (request.status >= 200 && request.status < 300) {
+          const payload = JSON.parse(request.responseText || "{}");
+          const items = Array.isArray(payload.items) ? payload.items : [];
+          localStorage.setItem(LIBRARY_KEY, JSON.stringify(items));
+          return items;
+        }
+      } catch (error) {}
+      try {
+        return JSON.parse(localStorage.getItem(LIBRARY_KEY) || "[]");
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function setLibrary(items) {
+      localStorage.setItem(LIBRARY_KEY, JSON.stringify(items));
+      try {
+        const request = new XMLHttpRequest();
+        request.open("POST", "/api/library", false);
+        request.setRequestHeader("Content-Type", "application/json");
+        request.send(JSON.stringify({ items }));
+      } catch (error) {}
+    }
+
+    function upsertDossier(dossierPatch) {
+      const library = getLibrary();
+      const index = library.findIndex((item) => item.id === dossierPatch.id);
+      const existing = index >= 0 ? library[index] : null;
+      const merged = {
+        id: dossierPatch.id,
+        gene: dossierPatch.gene || (existing && existing.gene) || "",
+        mutation: dossierPatch.mutation || (existing && existing.mutation) || "",
+        disease: dossierPatch.disease || (existing && existing.disease) || "",
+        cellType: dossierPatch.cellType || (existing && existing.cellType) || "",
+        species: dossierPatch.species || (existing && existing.species) || "",
+        title: dossierPatch.title || (existing && existing.title) || dossierTitle(dossierPatch),
+        inheritance: dossierPatch.inheritance || (existing && existing.inheritance) || "both",
+        editingStrategy: dossierPatch.editingStrategy || (existing && existing.editingStrategy) || "base_editing",
+        targetType: dossierPatch.targetType || (existing && existing.targetType) || "mutation_codon",
+        targetInput: dossierPatch.targetInput || (existing && existing.targetInput) || "",
+        exonTarget: dossierPatch.exonTarget || (existing && existing.exonTarget) || "",
+        domainTarget: dossierPatch.domainTarget || (existing && existing.domainTarget) || "",
+        transcriptId: dossierPatch.transcriptId || (existing && existing.transcriptId) || "",
+        transcriptLabel: dossierPatch.transcriptLabel || (existing && existing.transcriptLabel) || "",
+        literature: dossierPatch.literature || (existing && existing.literature) || null,
+        design: dossierPatch.design || (existing && existing.design) || null,
+        notes: dossierPatch.notes || (existing && existing.notes) || "",
+        createdAt: (existing && existing.createdAt) || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      if (index >= 0) library.splice(index, 1);
+      library.unshift(merged);
+      setLibrary(library);
+      return merged;
+    }
+
+    function createDossier() {
+      const gene = clean(els.gene.value);
+      if (!gene) {
+        els.statusBox.textContent = "Please enter at least a gene symbol before creating the dossier.";
+        return;
+      }
+      const targetType = els.targetType.value;
+      const targetInput = currentTargetDisplay();
+      if (!targetInput) {
+        els.statusBox.textContent = targetType === "mutation_codon"
+          ? "Enter a mutation or codon target before creating the dossier."
+          : targetType === "exon"
+            ? "Choose an exon target before creating the dossier."
+            : "Choose a protein domain target before creating the dossier.";
+        return;
+      }
+      const recommendation = els.editingStrategy.value === "auto_recommend"
+        ? recommendStrategyForIntake(targetType, targetInput)
+        : { strategy: els.editingStrategy.value, note: "" };
+      const dossier = upsertDossier({
+        id: dossierId({ gene, mutation: targetInput }),
+        title: dossierTitle({ gene, mutation: targetInput }),
+        gene,
+        mutation: targetInput,
+        species: els.species.value,
+        disease: clean(els.disease.value),
+        cellType: clean(els.cellType.value),
+        inheritance: els.inheritance.value,
+        editingStrategy: recommendation.strategy,
+        targetType,
+        targetInput,
+        exonTarget: targetType === "exon" ? clean(els.exonTarget.value) : "",
+        domainTarget: targetType === "protein_domain" ? clean(els.domainTarget.value) : "",
+        transcriptId: lookupState.transcriptId,
+        transcriptLabel: lookupState.transcriptLabel,
+        notes: `${clean(els.notes.value)}${clean(els.notes.value) && recommendation.note ? "\n\n" : ""}${recommendation.note || ""}`
+      });
+      localStorage.setItem(OPEN_DOSSIER_KEY, JSON.stringify({ id: dossier.id, source: "new-mutation" }));
+      window.top.location.href = `dossier.html?dossierId=${encodeURIComponent(dossier.id)}`;
+    }
+
+    els.targetType.addEventListener("change", renderTargetInputs);
+    els.loadTargetOptions.addEventListener("click", loadTargetOptions);
+    ["gene", "species"].forEach((id) => {
+      els[id].addEventListener("change", () => {
+        resetLookupState();
+        setSelectOptions(els.exonTarget, "Load exon options first", [], () => "");
+        setSelectOptions(els.domainTarget, "Load protein-domain options first", [], () => "");
+        renderTargetInputs();
+      });
+    });
+    els.createAndHub.addEventListener("click", createDossier);
+    if (EMBEDDED) {
+      document.body.classList.add("embedded");
+    }
+    renderTargetInputs();
+  </script>
+</body>
+</html>

@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MUTATR Settings</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --panel: #d7d7d7;
+      --panel-shadow: #7f7f7f;
+      --panel-highlight: #f7f7f7;
+      --green: #2f8a57;
+      --purple: #5d2f8e;
+      --ink: #111;
+      --muted: #40584e;
+      --soft: #eef5ef;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top, rgba(101, 210, 123, 0.18), transparent 24%),
+        linear-gradient(180deg, #123a22 0%, #102816 100%);
+      color: var(--ink);
+      font-family: "Trebuchet MS", Tahoma, Geneva, Verdana, sans-serif;
+      padding: 22px;
+    }
+
+    body.embedded {
+      min-height: auto;
+      background: transparent;
+      padding: 0;
+    }
+
+    .window {
+      width: min(980px, 100%);
+      margin: 0 auto;
+      border: 2px solid #111;
+      background: var(--panel);
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 var(--panel-shadow),
+        0 20px 38px rgba(0,0,0,0.25);
+      overflow: clip;
+    }
+
+    .titlebar {
+      min-height: 42px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: linear-gradient(90deg, var(--purple) 0%, #2f8a57 100%);
+      color: white;
+      border-bottom: 2px solid #111;
+      font-weight: 700;
+    }
+
+    .titlebar a {
+      color: white;
+      text-decoration: none;
+      font-weight: 800;
+    }
+
+    body.embedded .titlebar {
+      display: none;
+    }
+
+    body.embedded .window {
+      width: 100%;
+      margin: 0;
+      border: 0;
+      box-shadow: none;
+      background: transparent;
+    }
+
+    body.embedded .shell {
+      padding: 0;
+    }
+
+    .shell {
+      padding: 18px;
+      display: grid;
+      gap: 18px;
+      background: linear-gradient(180deg, #d6e0d5 0%, #c5d4c3 100%);
+    }
+
+    .panel {
+      border: 2px solid #111;
+      background: var(--soft);
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 #9ea8a1;
+      overflow: clip;
+    }
+
+    .panel-head {
+      padding: 10px 12px;
+      border-bottom: 2px solid #111;
+      background: linear-gradient(180deg, #dde8dc 0%, #ced9cd 100%);
+      font-weight: 800;
+    }
+
+    .panel-body {
+      padding: 14px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .runtime-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .runtime-card {
+      border: 2px solid #111;
+      background: white;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .runtime-card h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .runtime-card p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    input, button {
+      font: inherit;
+    }
+
+    input {
+      width: 100%;
+      min-height: 38px;
+      border: 2px solid #111;
+      background: white;
+      color: var(--ink);
+      padding: 9px 10px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .win-button {
+      appearance: none;
+      border: 2px solid #111;
+      background: var(--panel);
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 var(--panel-shadow);
+      min-height: 40px;
+      padding: 0 14px;
+      font-weight: 800;
+      cursor: pointer;
+      color: var(--ink);
+    }
+
+    .win-button.primary {
+      background: #d8f0de;
+    }
+
+    .win-button.secondary {
+      background: #eadcf9;
+    }
+
+    .callout {
+      border: 2px solid #111;
+      background: white;
+      padding: 12px;
+      white-space: pre-wrap;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      min-height: 26px;
+      padding: 2px 10px;
+      border: 2px solid #111;
+      background: #fff7ce;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .status.good {
+      background: #d8f0de;
+    }
+
+    .status.bad {
+      background: #ffd6d6;
+    }
+
+    @media (max-width: 760px) {
+      .grid,
+      .runtime-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="window">
+    <div class="titlebar">
+      <span>MUTATR_SETTINGS.EXE</span>
+      <div class="actions">
+        <a href="mutatr.html">Home</a>
+        <a href="explore.html">Directory</a>
+      </div>
+    </div>
+    <div class="shell">
+      <section class="panel">
+        <div class="panel-head">OpenAI Settings</div>
+        <div class="panel-body">
+          <div class="grid">
+            <label>OpenAI API key
+              <input id="apiKey" type="password" placeholder="sk-...">
+            </label>
+            <label>Model
+              <input id="apiModel" value="gpt-5-mini">
+            </label>
+          </div>
+          <input id="apiKeyFileInput" type="file" accept=".txt,.rtf,.md,.env" hidden>
+          <div class="actions">
+            <button id="saveAiSettings" class="win-button primary" type="button">Save Settings</button>
+            <button id="loadBundledAiKey" class="win-button secondary" type="button">Load Bundled Key (Optional)</button>
+            <button id="loadAiKeyFile" class="win-button secondary" type="button">Load API Key File</button>
+            <button id="clearAiSettings" class="win-button" type="button">Forget API Key</button>
+          </div>
+          <div class="callout" id="aiNotes">Paste your own OpenAI API key here and save it for this Mac. Settings are stored only in this browser on this machine.</div>
+          <div class="status" id="status">Idle</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">Automation Runtime</div>
+        <div class="panel-body">
+          <div class="runtime-grid">
+            <div class="runtime-card">
+              <h3>MUTATR app server</h3>
+              <div class="status" id="appRuntimeStatus">Checking</div>
+              <p id="appRuntimeNote">Waiting for a status check.</p>
+            </div>
+            <div class="runtime-card">
+              <h3>Automation helper</h3>
+              <div class="status" id="helperRuntimeStatus">Checking</div>
+              <p id="helperRuntimeNote">Waiting for a status check.</p>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="refreshRuntime" class="win-button primary" type="button">Refresh Runtime Status</button>
+            <button id="restartHelper" class="win-button secondary" type="button">Restart Automation Helper</button>
+          </div>
+          <div class="callout" id="runtimeNotes">Use the visible MUTATR launcher app to start the app and the automation helper together.</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const OPENAI_KEY_STORAGE = "mutatrOpenAiKey";
+    const OPENAI_MODEL_STORAGE = "mutatrOpenAiModel";
+    const BUNDLED_KEY_PATH = "MUTATROpenAIAPIKey.rtf";
+    const APP_RUNTIME_STATUS = `${window.location.origin}/runtime/status`;
+    const RESTART_HELPER_URL = `${window.location.origin}/runtime/restart-helper`;
+    const EMBEDDED = new URLSearchParams(window.location.search).get("embed") === "1";
+    const els = {};
+    document.querySelectorAll("[id]").forEach((el) => { els[el.id] = el; });
+    if (EMBEDDED) {
+      document.body.classList.add("embedded");
+    }
+
+    function clean(value) {
+      return (value || "").trim();
+    }
+
+    function extractApiKeyFromText(text) {
+      const match = String(text || "").match(/sk-[A-Za-z0-9_-]+/);
+      return match ? match[0] : "";
+    }
+
+    function status(text) {
+      els.status.textContent = text;
+    }
+
+    function applyRuntimeStatus(el, ok, goodText, badText) {
+      el.textContent = ok ? goodText : badText;
+      el.classList.toggle("good", !!ok);
+      el.classList.toggle("bad", !ok);
+    }
+
+    async function refreshRuntimeStatus() {
+      try {
+        const response = await fetch(APP_RUNTIME_STATUS, { cache: "no-store" });
+        if (!response.ok) throw new Error(`Runtime status request failed (${response.status}).`);
+        const payload = await response.json();
+        const appOk = !!(payload.app && payload.app.health);
+        const helperOk = !!(payload.automation && payload.automation.health);
+        applyRuntimeStatus(els.appRuntimeStatus, appOk, "Ready", "Offline");
+        applyRuntimeStatus(els.helperRuntimeStatus, helperOk, "Ready", "Needs restart");
+        els.appRuntimeNote.textContent = appOk
+          ? `Serving MUTATR at ${payload.app.url}.`
+          : "The local MUTATR app server is not responding.";
+        els.helperRuntimeNote.textContent = helperOk
+          ? "Browser checks are available."
+          : "Automation is unavailable. Restart the helper below or relaunch MUTATR.";
+        els.runtimeNotes.textContent = helperOk
+          ? "Automation looks healthy. Prime and base-editing browser checks should be available."
+          : "The MUTATR launcher app starts both services together. If only automation is down, try Restart Automation Helper.";
+      } catch (error) {
+        applyRuntimeStatus(els.appRuntimeStatus, false, "Ready", "Offline");
+        applyRuntimeStatus(els.helperRuntimeStatus, false, "Ready", "Unknown");
+        els.appRuntimeNote.textContent = "The settings page could not reach the local MUTATR runtime.";
+        els.helperRuntimeNote.textContent = "Automation status could not be verified.";
+        els.runtimeNotes.textContent = `Runtime status check failed: ${error.message}`;
+      }
+    }
+
+    async function restartAutomationHelper() {
+      try {
+        els.runtimeNotes.textContent = "Restarting the automation helper...";
+        const response = await fetch(RESTART_HELPER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.ok === false) {
+          throw new Error(payload.error || `Restart failed (${response.status}).`);
+        }
+        els.runtimeNotes.textContent = payload.message || "Automation helper restarted.";
+      } catch (error) {
+        els.runtimeNotes.textContent = `Automation restart failed: ${error.message}`;
+      } finally {
+        await refreshRuntimeStatus();
+      }
+    }
+
+    function saveAiSettings() {
+      localStorage.setItem(OPENAI_KEY_STORAGE, clean(els.apiKey.value));
+      localStorage.setItem(OPENAI_MODEL_STORAGE, clean(els.apiModel.value) || "gpt-5-mini");
+      status("Saved");
+      els.aiNotes.textContent = "OpenAI settings saved in this browser.";
+    }
+
+    function clearAiSettings() {
+      localStorage.removeItem(OPENAI_KEY_STORAGE);
+      localStorage.removeItem(OPENAI_MODEL_STORAGE);
+      els.apiKey.value = "";
+      els.apiModel.value = "gpt-5-mini";
+      status("Cleared");
+      els.aiNotes.textContent = "OpenAI settings cleared from this browser.";
+    }
+
+    async function loadBundledAiKey() {
+      try {
+        const response = await fetch(BUNDLED_KEY_PATH, { cache: "no-store" });
+        if (!response.ok) throw new Error(`Could not load bundled key file (${response.status}).`);
+        const text = await response.text();
+        const key = extractApiKeyFromText(text);
+        if (!key) throw new Error("No OpenAI API key was found in the bundled key file.");
+        els.apiKey.value = key;
+        localStorage.setItem(OPENAI_KEY_STORAGE, key);
+        status("Bundled key loaded");
+        els.aiNotes.textContent = "Optional bundled OpenAI API key loaded into this browser for this MUTATR copy.";
+      } catch (error) {
+        status("Key load failed");
+        els.aiNotes.textContent = `Bundled key load failed: ${error.message}`;
+      }
+    }
+
+    function loadAiKeyFilePicker() {
+      els.apiKeyFileInput.click();
+    }
+
+    async function handleAiKeyFile(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const key = extractApiKeyFromText(text);
+        if (!key) throw new Error("No OpenAI API key was found in the selected file.");
+        els.apiKey.value = key;
+        localStorage.setItem(OPENAI_KEY_STORAGE, key);
+        status("Key file loaded");
+        els.aiNotes.textContent = `Loaded OpenAI API key from ${file.name}.`;
+      } catch (error) {
+        status("Key load failed");
+        els.aiNotes.textContent = `API key file load failed: ${error.message}`;
+      } finally {
+        els.apiKeyFileInput.value = "";
+      }
+    }
+
+    els.saveAiSettings.addEventListener("click", saveAiSettings);
+    els.loadBundledAiKey.addEventListener("click", loadBundledAiKey);
+    els.loadAiKeyFile.addEventListener("click", loadAiKeyFilePicker);
+    els.apiKeyFileInput.addEventListener("change", handleAiKeyFile);
+    els.clearAiSettings.addEventListener("click", clearAiSettings);
+    els.refreshRuntime.addEventListener("click", refreshRuntimeStatus);
+    els.restartHelper.addEventListener("click", restartAutomationHelper);
+
+    els.apiKey.value = localStorage.getItem(OPENAI_KEY_STORAGE) || "";
+    els.apiModel.value = localStorage.getItem(OPENAI_MODEL_STORAGE) || "gpt-5-mini";
+    refreshRuntimeStatus();
+  </script>
+</body>
+</html>

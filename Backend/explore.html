@@ -1,0 +1,1824 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MUTATR Library</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #102816;
+      --bg-2: #173924;
+      --panel: #d7d7d7;
+      --panel-shadow: #7f7f7f;
+      --panel-highlight: #f7f7f7;
+      --green: #2f8a57;
+      --purple: #5d2f8e;
+      --yellow: #ffec59;
+      --ink: #111;
+      --muted: #385148;
+      --line: #223228;
+      --soft: #eef5ef;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top, rgba(101, 210, 123, 0.18), transparent 24%),
+        linear-gradient(180deg, #123a22 0%, #102816 100%);
+      color: var(--ink);
+      font-family: "Trebuchet MS", Tahoma, Geneva, Verdana, sans-serif;
+      padding: 22px;
+    }
+
+    body.embedded {
+      min-height: auto;
+      background: transparent;
+      padding: 0;
+    }
+
+    a {
+      color: #184c8f;
+    }
+
+    .window {
+      width: min(1380px, 100%);
+      margin: 0 auto;
+      border: 2px solid #111;
+      background: var(--panel);
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 var(--panel-shadow),
+        0 20px 38px rgba(0,0,0,0.25);
+      overflow: clip;
+    }
+
+    .titlebar {
+      min-height: 42px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: linear-gradient(90deg, var(--purple) 0%, #2f8a57 100%);
+      color: white;
+      border-bottom: 2px solid #111;
+      font-weight: 700;
+    }
+
+    .titlebar a {
+      color: white;
+      text-decoration: none;
+      font-weight: 800;
+    }
+
+    body.embedded .titlebar {
+      display: none;
+    }
+
+    body.embedded .window {
+      width: 100%;
+      margin: 0;
+      border: 0;
+      box-shadow: none;
+      background: transparent;
+    }
+
+    body.embedded .shell {
+      padding: 0;
+    }
+
+    .shell {
+      padding: 18px;
+      display: grid;
+      grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+      gap: 18px;
+      background: linear-gradient(180deg, #d6e0d5 0%, #c5d4c3 100%);
+    }
+
+    .panel {
+      border: 2px solid #111;
+      background: var(--soft);
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 #9ea8a1;
+      overflow: clip;
+    }
+
+    .panel-head {
+      padding: 10px 12px;
+      border-bottom: 2px solid #111;
+      background: linear-gradient(180deg, #dde8dc 0%, #ced9cd 100%);
+      font-weight: 800;
+    }
+
+    .panel-body {
+      padding: 14px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .target-stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .target-help {
+      border: 2px solid #111;
+      background: #f8fbf8;
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      font: inherit;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      min-height: 38px;
+      border: 2px solid #111;
+      background: white;
+      color: var(--ink);
+      padding: 9px 10px;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .actions.tight {
+      gap: 8px;
+      align-items: center;
+    }
+
+    .win-button {
+      appearance: none;
+      border: 2px solid #111;
+      background: var(--panel);
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 var(--panel-shadow);
+      min-height: 40px;
+      padding: 0 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .win-button.primary {
+      background: #d8f0de;
+    }
+
+    .win-button.secondary {
+      background: #eadcf9;
+    }
+
+    .win-button.filter-active {
+      background: #dbe9ff;
+    }
+
+    .win-button:active {
+      box-shadow:
+        inset -2px -2px 0 var(--panel-highlight),
+        inset 2px 2px 0 var(--panel-shadow);
+      transform: translate(1px, 1px);
+    }
+
+    .win-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .callout {
+      border: 2px solid #111;
+      background: #f8fbf8;
+      padding: 12px;
+    }
+
+    .summary-box {
+      background: white;
+      border: 2px solid #111;
+      padding: 12px;
+      min-height: 140px;
+      white-space: pre-wrap;
+    }
+
+    .paper-list,
+    .library-list,
+    .mutation-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .paper-section {
+      display: grid;
+      gap: 10px;
+    }
+
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .paper-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      border: 2px solid #111;
+      background: linear-gradient(180deg, #dde8dc 0%, #ced9cd 100%);
+      font-weight: 800;
+    }
+
+    .paper-section-head b {
+      font-size: 15px;
+    }
+
+    .paper,
+    .library-item,
+    .mutation-item {
+      border: 2px solid #111;
+      background: white;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .paper h3,
+    .library-item h3,
+    .mutation-item h3 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .mutation-grid {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 1fr) 170px;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .mutation-metric {
+      border: 2px solid #111;
+      background: #f8fbf8;
+      padding: 10px;
+      display: grid;
+      gap: 4px;
+      min-height: 100%;
+    }
+
+    .mutation-metric b {
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .meta {
+      color: #40584e;
+      font-size: 13px;
+    }
+
+    .breadth-note {
+      border: 2px solid #111;
+      background: #fff7ce;
+      padding: 8px 10px;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .breadth-note b {
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 8px;
+      border: 2px solid #111;
+      background: #eef5ff;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      min-height: 26px;
+      padding: 2px 10px;
+      border: 2px solid #111;
+      background: #fff7ce;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .status.busy {
+      background: #d9f0ff;
+    }
+
+    .loading-box {
+      border: 2px solid #111;
+      background: #eef5ff;
+      padding: 14px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .loading-box b {
+      font-size: 16px;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    details.settings {
+      border: 2px solid #111;
+      background: #f8fbf8;
+    }
+
+    details.settings summary {
+      cursor: pointer;
+      padding: 10px 12px;
+      font-weight: 800;
+      background: linear-gradient(180deg, #dde8dc 0%, #ced9cd 100%);
+      border-bottom: 2px solid #111;
+    }
+
+    .settings[hidden] {
+      display: none;
+    }
+
+    .settings-body {
+      padding: 12px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .empty {
+      color: #46574d;
+      font-style: italic;
+    }
+
+    @media (max-width: 980px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .settings-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .mutation-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="window">
+    <div class="titlebar">
+      <span>MUTATR_LIBRARY.EXE</span>
+      <div class="actions">
+        <a href="mutatr.html">Home</a>
+        <a href="new-mutation.html">New Mutation</a>
+      </div>
+    </div>
+    <div class="shell">
+      <section class="panel">
+        <div class="panel-head">Explore Mutation</div>
+        <div class="panel-body">
+          <div class="grid">
+            <label>Gene symbol
+              <input id="gene" placeholder="DNMT3A">
+            </label>
+            <label>Target type
+              <select id="targetType">
+                <option value="mutation_codon">Mutation / codon</option>
+                <option value="exon">Exon</option>
+                <option value="protein_domain">Protein domain</option>
+              </select>
+            </label>
+            <div class="target-stack">
+              <label>Target options
+                <button id="loadTargetOptions" class="win-button secondary" type="button">Load Exons / Domains</button>
+              </label>
+              <label id="mutationWrap">Mutation / codon of interest (optional)
+                <input id="mutation" placeholder="R882H or R882">
+              </label>
+              <label id="exonWrap" hidden>Exon target
+                <select id="exonTarget" disabled>
+                  <option value="">Load exon options first</option>
+                </select>
+              </label>
+              <label id="domainWrap" hidden>Protein domain target
+                <select id="domainTarget" disabled>
+                  <option value="">Load protein-domain options first</option>
+                </select>
+              </label>
+              <div class="target-help" id="targetHelp">Mutation / codon targets can be typed directly. Exon and protein-domain targets become dropdowns after gene lookup.</div>
+            </div>
+            <label>Disease of interest (optional)
+              <input id="disease" placeholder="clonal hematopoiesis">
+            </label>
+            <label>Cell type (optional)
+              <input id="cellType" placeholder="macrophage, T cell, HSPC">
+            </label>
+            <label>Inheritance context
+              <select id="inheritance">
+                <option value="both">Somatic and germline</option>
+                <option value="somatic">Somatic</option>
+                <option value="germline">Germline</option>
+              </select>
+            </label>
+          </div>
+          <div class="callout" id="workflowBanner" hidden>
+            You started a Do Both workflow from the mutation hub. Begin with the literature side here, then continue into CRISPR design for the same dossier.
+            <div class="actions tight" style="margin-top:10px;">
+              <button id="continueToDesign" class="win-button primary" type="button">Continue To CRISPR Design</button>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="search" class="win-button primary" type="button">Explore Mutation</button>
+            <button id="searchAi" class="win-button primary" type="button">AI-Assisted Search</button>
+            <button id="saveSearch" class="win-button secondary" type="button">Save Literature To Dossier</button>
+            <button id="clearSearch" class="win-button" type="button">Clear</button>
+          </div>
+          <div class="callout" id="searchInfo">
+            Enter a gene, then optionally narrow with a mutation, disease, and somatic/germline context.
+            This first pass searches Europe PMC live and builds a summary from the returned abstracts. API key and model settings live on the MUTATR Settings page.
+          </div>
+          <details class="settings" id="settingsPanel" hidden>
+            <summary>Literature + AI Settings</summary>
+            <div class="settings-body">
+              <div class="settings-grid">
+                <label>OpenAI API key
+                  <input id="apiKey" type="password" placeholder="sk-...">
+                </label>
+                <label>Model
+                  <input id="apiModel" value="gpt-5-mini">
+                </label>
+              </div>
+              <input id="apiKeyFileInput" type="file" accept=".txt,.rtf,.md,.env" hidden>
+              <div class="actions tight">
+                <button id="saveAiSettings" class="win-button" type="button">Save AI Settings</button>
+                <button id="loadBundledAiKey" class="win-button secondary" type="button">Load Bundled Key (Optional)</button>
+                <button id="loadAiKeyFile" class="win-button secondary" type="button">Load API Key File</button>
+                <button id="clearAiSettings" class="win-button" type="button">Forget API Key</button>
+              </div>
+              <div class="callout" id="aiNotes">
+                AI is optional. Paste your own OpenAI API key here if you want OpenAI-assisted literature search or summary help. The key is stored only in this browser on this machine.
+              </div>
+            </div>
+          </details>
+          <div class="status" id="status">Idle</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">Results</div>
+        <div class="panel-body">
+          <div class="filter-bar">
+            <span class="tag">Filter</span>
+            <button id="filterAll" class="win-button filter-active" type="button">All</button>
+            <button id="filterReviews" class="win-button" type="button">Reviews</button>
+            <button id="filterPrimary" class="win-button" type="button">Primary Research</button>
+          </div>
+          <label>Summary
+            <div class="summary-box" id="summary">No search yet.</div>
+          </label>
+          <div class="paper-list" id="mutationHotspots" hidden></div>
+          <div class="paper-list" id="papers">
+            <div class="empty">Important papers will appear here with links once you run a search.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" style="grid-column: 1 / -1;">
+        <div class="panel-head">Library</div>
+        <div class="panel-body">
+          <div class="callout">
+            The library is MUTATR's mutation directory. Each dossier can hold a literature side, a design side, or both.
+          </div>
+          <div class="library-list" id="library">
+            <div class="empty">Saved mutation dossiers will live here in this browser.</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const els = {};
+    document.querySelectorAll("[id]").forEach((el) => { els[el.id] = el; });
+    const LIBRARY_KEY = "mutatrLibrary";
+    const OPEN_DOSSIER_KEY = "mutatrOpenDossier";
+    const FLOW_KEY = "mutatrWorkflowIntent";
+    const OPENAI_KEY_STORAGE = "mutatrOpenAiKey";
+    const OPENAI_MODEL_STORAGE = "mutatrOpenAiModel";
+    const BUNDLED_KEY_PATH = "MUTATROpenAIAPIKey.rtf";
+    const TARGET_PRIMARY_COUNT = 5;
+    const TARGET_REVIEW_COUNT = 5;
+    const ENSEMBL_BASE = "https://rest.ensembl.org";
+    const TARGET_OPTIONS_CACHE_KEY = "mutatrTargetOptionsCacheV1";
+    const AA3_TO_1 = {
+      Ala: "A", Arg: "R", Asn: "N", Asp: "D", Cys: "C", Gln: "Q", Glu: "E", Gly: "G",
+      His: "H", Ile: "I", Leu: "L", Lys: "K", Met: "M", Phe: "F", Pro: "P", Ser: "S",
+      Thr: "T", Trp: "W", Tyr: "Y", Val: "V", Ter: "*", Stop: "*"
+    };
+    let lastPapers = [];
+    let lastSearchRecord = null;
+    let lastHotspotMutations = [];
+    let activeWorkflowIntent = null;
+    let resultFilter = "all";
+    const targetLookupState = { transcriptLabel: "" };
+    const EMBEDDED = new URLSearchParams(window.location.search).get("embed") === "1";
+
+    function clean(value) {
+      return (value || "").trim();
+    }
+
+    function safeUpper(value) {
+      return clean(value).toUpperCase();
+    }
+
+    function dossierId(parts) {
+      const gene = safeUpper(parts.gene) || "GENE";
+      const mutation = safeUpper(parts.mutation).replace(/[^A-Z0-9.*-]+/g, "_");
+      return mutation ? `${gene}__${mutation}` : `${gene}__GENE`;
+    }
+
+    function dossierTitle(parts) {
+      const gene = clean(parts.gene) || "Gene";
+      const mutation = clean(parts.mutation);
+      return mutation ? `${gene} ${mutation}` : gene;
+    }
+
+    function currentTargetText() {
+      const type = els.targetType.value;
+      if (type === "exon") {
+        const raw = clean(els.exonTarget.value);
+        return raw ? `Exon ${raw}` : "";
+      }
+      if (type === "protein_domain") return clean(els.domainTarget.value);
+      return clean(els.mutation.value);
+    }
+
+    function renderTargetInputs() {
+      const type = els.targetType.value;
+      els.mutationWrap.hidden = type !== "mutation_codon";
+      els.exonWrap.hidden = type !== "exon";
+      els.domainWrap.hidden = type !== "protein_domain";
+      els.loadTargetOptions.disabled = type === "mutation_codon";
+      if (els.targetHelp) {
+        els.targetHelp.textContent = type === "mutation_codon"
+          ? "Mutation / codon targets can be typed directly."
+          : type === "exon"
+            ? "Load transcript options first, then choose the exon you want to disrupt or delete."
+            : "Load protein-domain options first, then choose the domain you want to disrupt or delete.";
+      }
+    }
+
+    async function ensemblFetch(path) {
+      const response = await fetch(`${ENSEMBL_BASE}${path}`, { headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error(`Ensembl lookup failed (${response.status})`);
+      return response.json();
+    }
+
+    function setStructuredOptions(selectEl, placeholder, options, renderOption, preferred = "") {
+      const rows = [`<option value="">${placeholder}</option>`];
+      options.forEach((item) => rows.push(renderOption(item)));
+      selectEl.innerHTML = rows.join("");
+      selectEl.disabled = options.length === 0;
+      if (preferred && Array.from(selectEl.options).some((option) => option.value === preferred)) {
+        selectEl.value = preferred;
+      }
+    }
+
+    function readTargetOptionsCache() {
+      try {
+        return JSON.parse(localStorage.getItem(TARGET_OPTIONS_CACHE_KEY) || "{}");
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function writeTargetOptionsCache(cache) {
+      try {
+        localStorage.setItem(TARGET_OPTIONS_CACHE_KEY, JSON.stringify(cache));
+      } catch (error) {
+        // Ignore cache-write failures so lookup can still succeed live.
+      }
+    }
+
+    function targetOptionsCacheKey(gene, species, type) {
+      return [clean(gene), clean(species || "homo_sapiens"), clean(type)].join("|").toLowerCase();
+    }
+
+    function getCachedTargetOptions(gene, species, type) {
+      const cache = readTargetOptionsCache();
+      const entry = cache[targetOptionsCacheKey(gene, species, type)];
+      if (!entry) return null;
+      const ageMs = Date.now() - Number(entry.savedAt || 0);
+      if (!Number.isFinite(ageMs) || ageMs > 1000 * 60 * 60 * 24 * 7) return null;
+      return entry;
+    }
+
+    function saveCachedTargetOptions(gene, species, type, payload) {
+      const cache = readTargetOptionsCache();
+      cache[targetOptionsCacheKey(gene, species, type)] = {
+        ...payload,
+        savedAt: Date.now()
+      };
+      writeTargetOptionsCache(cache);
+    }
+
+    async function loadTargetOptions() {
+      const gene = clean(els.gene.value);
+      const type = els.targetType.value;
+      if (!gene || type === "mutation_codon") {
+        status(type === "mutation_codon" ? "Mutation / codon targets can be typed directly" : "Need gene");
+        return;
+      }
+      status("Loading target options");
+      try {
+        const species = "homo_sapiens";
+        const cached = getCachedTargetOptions(gene, species, type);
+        if (cached) {
+          targetLookupState.transcriptLabel = cached.transcriptLabel || cached.transcriptId || "";
+          if (type === "exon") {
+          setStructuredOptions(els.exonTarget, "Select an exon", cached.options || [], (item) => `<option value="${item.value}">${item.label}</option>`, clean(els.exonTarget.value));
+          if ((cached.options || []).length) els.exonTarget.options[0].textContent = `Select an exon (${cached.options.length} loaded)`;
+          els.exonTarget.value = "";
+          status(`Loaded ${cached.options.length} cached exon option(s) for ${gene}`);
+        } else {
+          setStructuredOptions(els.domainTarget, (cached.options || []).length ? "Select a protein domain" : "No annotated protein domains found", cached.options || [], (item) => `<option value="${item.value}">${item.label}</option>`, clean(els.domainTarget.value));
+          if ((cached.options || []).length) els.domainTarget.options[0].textContent = `Select a protein domain (${cached.options.length} loaded)`;
+          els.domainTarget.value = "";
+          status((cached.options || []).length ? `Loaded ${cached.options.length} cached protein-domain option(s) for ${gene}` : "No annotated protein domains found");
+        }
+          renderTargetInputs();
+          return;
+        }
+        const geneData = await ensemblFetch(`/lookup/symbol/${encodeURIComponent(species)}/${encodeURIComponent(gene)}?expand=1`);
+        const transcripts = (geneData.Transcript || [])
+          .filter((tx) => tx.biotype === "protein_coding" && tx.Translation && tx.Translation.id)
+          .sort((a, b) => Number(Boolean(b.is_canonical)) - Number(Boolean(a.is_canonical)));
+        if (!transcripts.length) throw new Error(`No protein-coding transcript with a translated product was found for ${gene}.`);
+        const transcript = transcripts[0];
+        targetLookupState.transcriptLabel = transcript.display_name || transcript.id || "";
+        if (type === "exon") {
+          const options = (transcript.Exon || []).map((exon, index) => ({ value: String(index + 1), label: `Exon ${index + 1}${exon.id ? ` · ${exon.id}` : ""}` }));
+          saveCachedTargetOptions(gene, species, type, {
+            transcriptId: transcript.id || "",
+            transcriptLabel: targetLookupState.transcriptLabel,
+            options
+          });
+          setStructuredOptions(els.exonTarget, "Select an exon", options, (item) => `<option value="${item.value}">${item.label}</option>`, clean(els.exonTarget.value));
+          els.exonTarget.options[0].textContent = `Select an exon (${options.length} loaded)`;
+          els.exonTarget.value = "";
+          status(`Loaded ${options.length} exon option(s) for ${gene}`);
+        } else {
+          const features = await ensemblFetch(`/overlap/translation/${encodeURIComponent(transcript.Translation.id)}?feature=protein_feature`);
+          const options = (features || [])
+            .filter((feature) => clean(feature.description || feature.interpro_description || feature.logic_name))
+            .map((feature) => {
+              const label = clean(feature.description || feature.interpro_description || feature.logic_name);
+              return { value: label, label: `${label}${feature.start && feature.end ? ` (${feature.start}-${feature.end})` : ""}` };
+            })
+            .filter((item, index, arr) => arr.findIndex((other) => other.value === item.value) === index);
+          saveCachedTargetOptions(gene, species, type, {
+            transcriptId: transcript.id || "",
+            transcriptLabel: targetLookupState.transcriptLabel,
+            options
+          });
+          setStructuredOptions(els.domainTarget, options.length ? "Select a protein domain" : "No annotated protein domains found", options, (item) => `<option value="${item.value}">${item.label}</option>`, clean(els.domainTarget.value));
+          if (options.length) els.domainTarget.options[0].textContent = `Select a protein domain (${options.length} loaded)`;
+          els.domainTarget.value = "";
+          status(options.length ? `Loaded ${options.length} protein-domain option(s) for ${gene}` : "No annotated protein domains found");
+        }
+      } catch (error) {
+        status(`Target lookup failed: ${error.message}`);
+      }
+    }
+
+    function getApiKey() {
+      return clean(els.apiKey.value);
+    }
+
+    function getApiModel() {
+      return clean(els.apiModel.value) || "gpt-5-mini";
+    }
+
+    function extractApiKeyFromText(text) {
+      const match = String(text || "").match(/sk-[A-Za-z0-9_-]+/);
+      return match ? match[0] : "";
+    }
+
+    function extractResponseText(data) {
+      const pieces = [];
+      (data.output || []).forEach((item) => {
+        if (item.type !== "message" || !Array.isArray(item.content)) return;
+        item.content.forEach((part) => {
+          if (part.type === "output_text" && part.text) pieces.push(part.text);
+        });
+      });
+      return pieces.join("\n").trim();
+    }
+
+    function stripFence(value) {
+      return clean(value).replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+    }
+
+    async function openAiText(prompt) {
+      const apiKey = getApiKey();
+      if (!apiKey) throw new Error("Add an OpenAI API key in AI Settings first.");
+      const response = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: getApiModel(),
+          input: prompt
+        })
+      });
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(`OpenAI request failed: ${response.status} ${detail}`);
+      }
+      const data = await response.json();
+      return extractResponseText(data);
+    }
+
+    async function buildAiSearchQuery(record) {
+      const prompt = [
+        "You are helping build a precise Europe PMC literature search query for a mutation biology app.",
+        "Return strict JSON only with keys query and note.",
+        "Goal: produce a Europe PMC query that balances recall and specificity for mutation biology papers.",
+        "Prefer query syntax suitable for Europe PMC plain-text search.",
+        `Gene: ${record.gene}`,
+        `Mutation: ${record.mutation || "none"}`,
+        `Disease: ${record.disease || "none"}`,
+        `Cell type: ${record.cellType || "none"}`,
+        `Inheritance context: ${record.inheritance}`,
+        "The query should include the gene and, when present, mutation, disease, cell type, and inheritance context terms."
+      ].join("\n");
+      const raw = await openAiText(prompt);
+      return JSON.parse(stripFence(raw));
+    }
+
+    async function buildAiSummary(record, papers) {
+      const paperContext = papers.slice(0, 10).map((paper, index) => [
+        `Paper ${index + 1}: ${paper.title || "Untitled"}`,
+        `Authors/year/journal: ${paper.authorString || "Unknown"} ${paper.pubYear || ""} ${paper.journalTitle || ""}`.trim(),
+        `Abstract: ${stripTags(paper.abstractText || "No abstract available.")}`
+      ].join("\n")).join("\n\n");
+      const prompt = [
+        "You are writing a mutation-literature dossier summary for a biomedical research app.",
+        "Write a concise but informative summary in plain text.",
+        "Start with 1 compact overview paragraph, then 3-5 short bullet points with the most useful mechanistic or disease-context takeaways.",
+        "Do not invent claims beyond the provided papers.",
+        `Gene: ${record.gene}`,
+        `Mutation: ${record.mutation || "not specified"}`,
+        `Disease: ${record.disease || "not specified"}`,
+        `Cell type: ${record.cellType || "not specified"}`,
+        `Inheritance context: ${record.inheritance}`,
+        "",
+        paperContext
+      ].join("\n");
+      return openAiText(prompt);
+    }
+
+    function status(text) {
+      els.status.textContent = text;
+    }
+
+    function setBusy(isBusy, detail = "") {
+      [
+        els.search,
+        els.searchAi,
+        els.saveSearch,
+        els.clearSearch,
+        els.filterAll,
+        els.filterReviews,
+        els.filterPrimary
+      ].forEach((button) => {
+        button.disabled = isBusy;
+      });
+      els.status.classList.toggle("busy", isBusy);
+      if (detail) {
+        els.summary.textContent = detail;
+      }
+    }
+
+    function buildQuery() {
+      const gene = clean(els.gene.value);
+      const mutation = currentTargetText();
+      const disease = clean(els.disease.value);
+      const cellType = clean(els.cellType.value);
+      const inheritance = els.inheritance.value;
+      const parts = [];
+      if (!gene) return "";
+      parts.push(`"${gene}"`);
+      if (mutation) parts.push(`"${mutation}"`);
+      if (disease) parts.push(`"${disease}"`);
+      if (cellType) parts.push(`"${cellType}"`);
+      if (inheritance === "somatic") parts.push('(somatic OR mosaic OR "clonal hematopoiesis")');
+      if (inheritance === "germline") parts.push('(germline OR inherited OR congenital OR syndrome)');
+      if (inheritance === "both") parts.push('(somatic OR germline OR inherited)');
+      return parts.join(" AND ");
+    }
+
+    function buildFallbackQueries(record, aiSeedQuery = "") {
+      const gene = record.gene;
+      const mutation = record.mutation;
+      const disease = record.disease;
+      const cellType = record.cellType;
+      const somatic = '(somatic OR mosaic OR "clonal hematopoiesis")';
+      const germline = '(germline OR inherited OR congenital OR syndrome)';
+      const both = '(somatic OR germline OR inherited)';
+      const inheritanceTerm = record.inheritance === "somatic" ? somatic : record.inheritance === "germline" ? germline : both;
+      const exactParts = [`"${gene}"`];
+      if (mutation) exactParts.push(`"${mutation}"`);
+      if (disease) exactParts.push(`"${disease}"`);
+      if (cellType) exactParts.push(`"${cellType}"`);
+      exactParts.push(inheritanceTerm);
+
+      const plans = [];
+      if (aiSeedQuery) plans.push({ label: "AI-assisted exact", query: aiSeedQuery });
+      plans.push({ label: "Exact", query: exactParts.join(" AND ") });
+      if (mutation && disease && cellType) plans.push({ label: "Without inheritance", query: [`"${gene}"`, `"${mutation}"`, `"${disease}"`, `"${cellType}"`].join(" AND ") });
+      if (mutation && disease) plans.push({ label: "Gene + mutation + disease", query: [`"${gene}"`, `"${mutation}"`, `"${disease}"`].join(" AND ") });
+      if (mutation && cellType) plans.push({ label: "Gene + mutation + cell type", query: [`"${gene}"`, `"${mutation}"`, `"${cellType}"`].join(" AND ") });
+      if (mutation) plans.push({ label: "Gene + mutation", query: [`"${gene}"`, `"${mutation}"`].join(" AND ") });
+      if (disease && cellType) plans.push({ label: "Gene + disease + cell type", query: [`"${gene}"`, `"${disease}"`, `"${cellType}"`].join(" AND ") });
+      if (disease) plans.push({ label: "Gene + disease", query: [`"${gene}"`, `"${disease}"`].join(" AND ") });
+      if (cellType) plans.push({ label: "Gene + cell type", query: [`"${gene}"`, `"${cellType}"`].join(" AND ") });
+      plans.push({ label: "Gene + inheritance", query: [`"${gene}"`, inheritanceTerm].join(" AND ") });
+      plans.push({ label: "Gene only", query: `"${gene}"` });
+
+      const seen = new Set();
+      return plans.filter((plan) => {
+        const normalized = plan.query.trim();
+        if (!normalized || seen.has(normalized)) return false;
+        seen.add(normalized);
+        return true;
+      });
+    }
+
+    async function epmcSearch(query, pageSize = 30) {
+      const url = `https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(query)}&format=json&pageSize=${pageSize}&resultType=core`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Europe PMC request failed: ${response.status}`);
+      return response.json();
+    }
+
+    function stripTags(value) {
+      return (value || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    }
+
+    function firstSentence(text) {
+      const cleanText = stripTags(text);
+      const match = cleanText.match(/.+?[.!?](\s|$)/);
+      return match ? match[0].trim() : cleanText.slice(0, 240);
+    }
+
+    function summarizePapers(record, papers) {
+      const gene = record.gene;
+      const mutation = record.mutation;
+      const disease = record.disease;
+      const cellType = record.cellType;
+      const inheritanceText = record.inheritance === "both" ? "somatic and germline" : record.inheritance;
+      const described = papers.length ? `${papers.length} paper${papers.length === 1 ? "" : "s"} surfaced in this first pass.` : "No papers surfaced in this first pass.";
+      const snippets = papers
+        .filter((paper) => paper.abstractText)
+        .slice(0, 3)
+        .map((paper) => `- ${paper.title}: ${firstSentence(paper.abstractText)}`)
+        .join("\n");
+
+      return [
+        `${gene}${mutation ? ` ${mutation}` : ""}${disease ? ` in ${disease}` : ""}${cellType ? ` in ${cellType}` : ""} with ${inheritanceText} context.`,
+        described,
+        papers.length ? "Quick abstract signals:" : "",
+        snippets
+      ].filter(Boolean).join("\n\n");
+    }
+
+    function paperLink(paper) {
+      return paper.pmid
+        ? `https://pubmed.ncbi.nlm.nih.gov/${paper.pmid}/`
+        : paper.doi
+          ? `https://doi.org/${paper.doi}`
+          : paper.fullTextUrlList && paper.fullTextUrlList.fullTextUrl && paper.fullTextUrlList.fullTextUrl[0]
+            ? paper.fullTextUrlList.fullTextUrl[0].url
+            : "#";
+    }
+
+    function inferPaperKind(paper) {
+      const joined = [
+        paper.title || "",
+        paper.pubType || "",
+        Array.isArray(paper.pubTypeList && paper.pubTypeList.pubType) ? paper.pubTypeList.pubType.join(" ") : "",
+        paper.journalTitle || ""
+      ].join(" ").toLowerCase();
+      if (
+        joined.includes("review") ||
+        joined.includes("systematic review") ||
+        joined.includes("meta-analysis") ||
+        joined.includes("consensus") ||
+        joined.includes("guideline")
+      ) {
+        return "review";
+      }
+      return "primary";
+    }
+
+    function mutationSearchIsGeneOnly() {
+      return !clean(currentTargetText());
+    }
+
+    function aa3To1(value) {
+      return AA3_TO_1[value] || value;
+    }
+
+    function normalizeMutationToken(token) {
+      return clean(token).replace(/^p\./i, "").toUpperCase();
+    }
+
+    function extractProteinMutationHits(text) {
+      const haystack = String(text || "");
+      const hits = [];
+      const oneLetter = /\b(?:p\.)?([A-Z])([1-9][0-9]{0,3})([A-Z*])\b/g;
+      const threeLetter = /\b(?:p\.)?(Ala|Arg|Asn|Asp|Cys|Gln|Glu|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val)([1-9][0-9]{0,3})(Ala|Arg|Asn|Asp|Cys|Gln|Glu|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val|Ter|Stop|\*)\b/g;
+      const frameshift1 = /\b(?:p\.)?([A-Z])([1-9][0-9]{0,3})([A-Z*])?fs(?:\*[0-9]+)?\b/g;
+      const frameshift3 = /\b(?:p\.)?(Ala|Arg|Asn|Asp|Cys|Gln|Glu|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val)([1-9][0-9]{0,3})(Ala|Arg|Asn|Asp|Cys|Gln|Glu|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val)?fs(?:\*[0-9]+)?\b/g;
+      const proteinIndel1 = /\b(?:p\.)?([A-Z])([1-9][0-9]{0,3})(?:_([A-Z])([1-9][0-9]{0,3}))?(delins[A-Za-z0-9*]+|del|dup|ins[A-Za-z0-9*]+)\b/g;
+      const proteinIndel3 = /\b(?:p\.)?(Ala|Arg|Asn|Asp|Cys|Gln|Glu|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val)([1-9][0-9]{0,3})(?:_(Ala|Arg|Asn|Asp|Cys|Gln|Glu|Gly|His|Ile|Leu|Lys|Met|Phe|Pro|Ser|Thr|Trp|Tyr|Val)([1-9][0-9]{0,3}))?(delins[A-Za-z0-9*]+|del|dup|ins[A-Za-z0-9*]+)\b/g;
+      const cdnaIndel = /\bc\.(\d+(?:_\d+)?)(delins[ACGT]+|del[ACGT]*|dup[ACGT]*|ins[ACGT]+)\b/gi;
+      let match;
+      while ((match = oneLetter.exec(haystack))) hits.push({ token: `${match[1]}${match[2]}${match[3]}`.toUpperCase(), index: match.index });
+      while ((match = threeLetter.exec(haystack))) hits.push({ token: `${aa3To1(match[1])}${match[2]}${aa3To1(match[3])}`.toUpperCase(), index: match.index });
+      while ((match = frameshift1.exec(haystack))) hits.push({ token: `${match[1]}${match[2]}FS`.toUpperCase(), index: match.index });
+      while ((match = frameshift3.exec(haystack))) hits.push({ token: `${aa3To1(match[1])}${match[2]}FS`.toUpperCase(), index: match.index });
+      while ((match = proteinIndel1.exec(haystack))) {
+        hits.push({ token: `${match[1]}${match[2]}${match[3] && match[4] ? `_${match[3]}${match[4]}` : ""}${match[5]}`.toUpperCase(), index: match.index });
+      }
+      while ((match = proteinIndel3.exec(haystack))) {
+        hits.push({ token: `${aa3To1(match[1])}${match[2]}${match[3] && match[4] ? `_${aa3To1(match[3])}${match[4]}` : ""}${match[5]}`.toUpperCase(), index: match.index });
+      }
+      while ((match = cdnaIndel.exec(haystack))) hits.push({ token: `c.${match[1]}${match[2]}`, index: match.index });
+      return hits
+        .map((hit) => ({ token: normalizeMutationToken(hit.token), index: hit.index }))
+        .filter((hit) => Boolean(hit.token));
+    }
+
+    function extractProteinMutations(text) {
+      return [...new Set(extractProteinMutationHits(text).map((hit) => hit.token))];
+    }
+
+    function textMentionsGene(text, gene) {
+      if (!gene) return false;
+      const escaped = clean(gene).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return new RegExp(`\\b${escaped}\\b`, "i").test(String(text || ""));
+    }
+
+    function geneAliases(gene) {
+      const cleanGene = clean(gene).toUpperCase();
+      if (!cleanGene) return [];
+      if (cleanGene === "TP53") return ["TP53", "P53"];
+      return [cleanGene];
+    }
+
+    function mutationMentionsNearGene(text, gene) {
+      const source = String(text || "");
+      const aliases = geneAliases(gene);
+      if (!aliases.some((alias) => textMentionsGene(source, alias))) return [];
+      const upper = source.toUpperCase();
+      const geneSpans = [];
+      aliases.forEach((alias) => {
+        const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(`\\b${escaped}\\b`, "gi");
+        let match;
+        while ((match = regex.exec(upper))) {
+          geneSpans.push({ start: match.index, end: match.index + match[0].length });
+        }
+      });
+      const hits = extractProteinMutationHits(source).filter((hit) =>
+        geneSpans.some((span) => Math.abs(hit.index - span.start) <= 40 || (hit.index >= span.start && hit.index <= span.end + 40))
+      );
+      return [...new Set(hits.map((hit) => hit.token))];
+    }
+
+    function buildHotspotQuery(record) {
+      const parts = [`"${record.gene}"`, '(mutation OR mutant OR variant OR hotspot OR missense OR frameshift OR deletion OR insertion)'];
+      if (record.disease) parts.push(`"${record.disease}"`);
+      if (record.cellType) parts.push(`"${record.cellType}"`);
+      if (record.inheritance === "somatic") parts.push('(somatic OR mosaic OR "clonal hematopoiesis")');
+      if (record.inheritance === "germline") parts.push('(germline OR inherited OR congenital OR syndrome)');
+      return parts.join(" AND ");
+    }
+
+    function detectInheritanceContext(text) {
+      const haystack = String(text || "").toLowerCase();
+      const somaticHits = (haystack.match(/\b(somatic|mosaic|tumou?r|tumor|cancer|clonal hematopoiesis|neoplasm|leukemia|lymphoma|myeloma|carcinoma|melanoma)\b/g) || []).length;
+      const germlineHits = (haystack.match(/\b(germline|inherited|familial|congenital|syndrome|hereditary)\b/g) || []).length;
+      if (somaticHits && germlineHits) return "mixed";
+      if (somaticHits) return "somatic";
+      if (germlineHits) return "germline";
+      return "unclear";
+    }
+
+    function detectDiseaseLabel(text) {
+      const haystack = stripTags(text || "").toLowerCase();
+      const patterns = [
+        /\bacute myeloid leukemia\b/,
+        /\bmyelodysplastic syndrome\b/,
+        /\bclonal hematopoiesis\b/,
+        /\bcolorectal cancer\b/,
+        /\bpancreatic cancer\b/,
+        /\blung cancer\b/,
+        /\bbreast cancer\b/,
+        /\bovarian cancer\b/,
+        /\bprostate cancer\b/,
+        /\bmelanoma\b/,
+        /\blymphoma\b/,
+        /\bleukemia\b/,
+        /\bglioma\b/,
+        /\bsarcoma\b/,
+        /\bcarcinoma\b/,
+        /\bcancer\b/,
+        /\btumou?r\b/,
+        /\bsyndrome\b/
+      ];
+      for (const pattern of patterns) {
+        const match = haystack.match(pattern);
+        if (match) return match[0];
+      }
+      return "context unclear";
+    }
+
+    function buildGeneMutationSnapshot(record, papers) {
+      if (!record.gene || !mutationSearchIsGeneOnly()) return [];
+      const byMutation = new Map();
+      papers.forEach((paper) => {
+        const text = [paper.title || "", stripTags(paper.abstractText || ""), paper.journalTitle || ""].join(" ");
+        const uniqueMentions = mutationMentionsNearGene(text, record.gene);
+        uniqueMentions.forEach((mutation) => {
+          const entry = byMutation.get(mutation) || {
+            mutation,
+            mentionCount: 0,
+            papers: [],
+            diseaseCounts: new Map(),
+            contextCounts: { somatic: 0, germline: 0, mixed: 0, unclear: 0 }
+          };
+          entry.mentionCount += 1;
+          entry.papers.push({
+            title: paper.title || "Untitled paper",
+            url: paperLink(paper)
+          });
+          const disease = detectDiseaseLabel(text);
+          entry.diseaseCounts.set(disease, (entry.diseaseCounts.get(disease) || 0) + 1);
+          const context = detectInheritanceContext(text);
+          entry.contextCounts[context] = (entry.contextCounts[context] || 0) + 1;
+          byMutation.set(mutation, entry);
+        });
+      });
+      return Array.from(byMutation.values())
+        .map((entry) => {
+          const topDisease = Array.from(entry.diseaseCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+          const topContext = Object.entries(entry.contextCounts).sort((a, b) => b[1] - a[1])[0];
+          return {
+            mutation: entry.mutation,
+            mentionCount: entry.mentionCount,
+            disease: topDisease ? topDisease[0] : "context unclear",
+            inheritance: topContext ? topContext[0] : "unclear",
+            papers: entry.papers.slice(0, 3)
+          };
+        })
+        .sort((a, b) => b.mentionCount - a.mentionCount || a.mutation.localeCompare(b.mutation))
+        .slice(0, 10);
+    }
+
+    function paperIdentity(paper) {
+      if (paper.pmid) return `pmid:${paper.pmid}`;
+      if (paper.doi) return `doi:${paper.doi}`.toLowerCase();
+      return `title:${(paper.title || "").trim().toLowerCase()}`;
+    }
+
+    function countKinds(papers) {
+      return {
+        reviews: papers.filter((paper) => inferPaperKind(paper) === "review").length,
+        primary: papers.filter((paper) => inferPaperKind(paper) !== "review").length
+      };
+    }
+
+    function quotaReached(papers) {
+      const counts = countKinds(papers);
+      return counts.reviews >= TARGET_REVIEW_COUNT && counts.primary >= TARGET_PRIMARY_COUNT;
+    }
+
+    function renderPaperCard(paper) {
+      const link = paperLink(paper);
+      const kind = inferPaperKind(paper);
+      return `
+        <article class="paper" data-kind="${kind}" data-origin-label="${paper.originLabel || ""}">
+          <h3><a href="${link}" target="_blank" rel="noreferrer">${paper.title || "Untitled paper"}</a></h3>
+          <div class="meta">${paper.authorString || "Unknown authors"}${paper.pubYear ? ` · ${paper.pubYear}` : ""}${paper.journalTitle ? ` · ${paper.journalTitle}` : ""}</div>
+          ${paper.originLabel ? `<div class="breadth-note"><b>Search breadth used:</b> ${paper.originLabel}</div>` : ""}
+          <div class="tags">
+            <span class="tag">${kind === "review" ? "Review" : "Primary research"}</span>
+            ${paper.pubType ? `<span class="tag">${paper.pubType}</span>` : ""}
+            ${paper.pmid ? `<span class="tag">PMID ${paper.pmid}</span>` : ""}
+            ${paper.doi ? `<span class="tag">DOI</span>` : ""}
+            ${paper.isOpenAccess === "Y" ? '<span class="tag">Open access</span>' : ""}
+          </div>
+          <div>${stripTags(paper.abstractText || "No abstract available in this result.")}</div>
+        </article>
+      `;
+    }
+
+    function renderPapers(papers) {
+      if (!papers.length) {
+        els.papers.innerHTML = '<div class="empty">No papers found. Try broadening the search or removing disease/mutation constraints.</div>';
+        return;
+      }
+      const reviews = papers.filter((paper) => inferPaperKind(paper) === "review");
+      const primary = papers.filter((paper) => inferPaperKind(paper) !== "review");
+      const sections = [];
+      if ((resultFilter === "all" || resultFilter === "reviews") && reviews.length) {
+        sections.push(`
+          <section class="paper-section">
+            <div class="paper-section-head"><b>Reviews</b><span>${reviews.length}</span></div>
+            ${reviews.map(renderPaperCard).join("")}
+          </section>
+        `);
+      }
+      if ((resultFilter === "all" || resultFilter === "primary") && primary.length) {
+        sections.push(`
+          <section class="paper-section">
+            <div class="paper-section-head"><b>Primary Research</b><span>${primary.length}</span></div>
+            ${primary.map(renderPaperCard).join("")}
+          </section>
+        `);
+      }
+      els.papers.innerHTML = sections.length
+        ? sections.join("")
+        : '<div class="empty">No papers in this filter yet. Try switching to All, Reviews, or Primary Research.</div>';
+    }
+
+    function renderMutationHotspots(items) {
+      lastHotspotMutations = items || [];
+      if (!items || !items.length) {
+        els.mutationHotspots.hidden = true;
+        els.mutationHotspots.innerHTML = "";
+        return;
+      }
+      els.mutationHotspots.hidden = false;
+      els.mutationHotspots.innerHTML = `
+        <section class="paper-section">
+          <div class="paper-section-head"><b>Top Mentioned Mutations For This Gene</b><span>${items.length}</span></div>
+          ${items.map((item, index) => `
+            <article class="mutation-item">
+              <div class="mutation-grid">
+                <div class="mutation-metric">
+                  <span class="meta">Mention count</span>
+                  <b>${item.mentionCount}</b>
+                  <span class="meta">Literature-derived</span>
+                </div>
+                <div style="display:grid;gap:8px;">
+                  <h3>${item.mutation}</h3>
+                  <div class="tags">
+                    <span class="tag">${item.disease}</span>
+                    <span class="tag">${item.inheritance}</span>
+                  </div>
+                  <div class="meta">${item.papers.length ? `Seen in ${item.papers.map((paper) => paper.title).join(" · ")}` : "No supporting paper titles surfaced."}</div>
+                </div>
+                <div class="actions" style="justify-content:flex-start;">
+                  <button class="win-button primary" type="button" data-hotspot-explore="${index}">Explore</button>
+                  <button class="win-button secondary" type="button" data-hotspot-dossier="${index}">Create Dossier</button>
+                </div>
+              </div>
+            </article>
+          `).join("")}
+        </section>
+      `;
+    }
+
+    function setResultFilter(nextFilter) {
+      resultFilter = nextFilter;
+      els.filterAll.classList.toggle("filter-active", nextFilter === "all");
+      els.filterReviews.classList.toggle("filter-active", nextFilter === "reviews");
+      els.filterPrimary.classList.toggle("filter-active", nextFilter === "primary");
+      renderPapers(lastPapers);
+    }
+
+    function getLibrary() {
+      try {
+        const request = new XMLHttpRequest();
+        request.open("GET", "/api/library", false);
+        request.send();
+        if (request.status >= 200 && request.status < 300) {
+          const payload = JSON.parse(request.responseText || "{}");
+          const items = Array.isArray(payload.items) ? payload.items : [];
+          localStorage.setItem(LIBRARY_KEY, JSON.stringify(items));
+          return items;
+        }
+      } catch (error) {}
+      try {
+        return JSON.parse(localStorage.getItem(LIBRARY_KEY) || "[]");
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function setLibrary(items) {
+      localStorage.setItem(LIBRARY_KEY, JSON.stringify(items));
+      try {
+        const request = new XMLHttpRequest();
+        request.open("POST", "/api/library", false);
+        request.setRequestHeader("Content-Type", "application/json");
+        request.send(JSON.stringify({ items }));
+      } catch (error) {}
+    }
+
+    function upsertDossier(dossierPatch) {
+      const library = getLibrary();
+      const index = library.findIndex((item) => item.id === dossierPatch.id);
+      const existing = index >= 0 ? library[index] : null;
+      const merged = {
+        id: dossierPatch.id,
+        gene: dossierPatch.gene || (existing && existing.gene) || "",
+        mutation: dossierPatch.mutation || (existing && existing.mutation) || "",
+        disease: dossierPatch.disease || (existing && existing.disease) || "",
+        cellType: dossierPatch.cellType || (existing && existing.cellType) || "",
+        species: dossierPatch.species || (existing && existing.species) || "",
+        title: dossierPatch.title || (existing && existing.title) || dossierTitle(dossierPatch),
+        inheritance: dossierPatch.inheritance || (existing && existing.inheritance) || "both",
+        editingStrategy: dossierPatch.editingStrategy || (existing && existing.editingStrategy) || "auto_recommend",
+        targetType: dossierPatch.targetType || (existing && existing.targetType) || "mutation_codon",
+        targetInput: dossierPatch.targetInput || (existing && existing.targetInput) || "",
+        exonTarget: dossierPatch.exonTarget || (existing && existing.exonTarget) || "",
+        domainTarget: dossierPatch.domainTarget || (existing && existing.domainTarget) || "",
+        transcriptId: dossierPatch.transcriptId || (existing && existing.transcriptId) || "",
+        transcriptLabel: dossierPatch.transcriptLabel || (existing && existing.transcriptLabel) || "",
+        literature: dossierPatch.literature || (existing && existing.literature) || null,
+        design: dossierPatch.design || (existing && existing.design) || null,
+        notes: dossierPatch.notes || (existing && existing.notes) || "",
+        createdAt: (existing && existing.createdAt) || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      if (index >= 0) {
+        library.splice(index, 1);
+      }
+      library.unshift(merged);
+      setLibrary(library);
+      return merged;
+    }
+
+    function renderLibrary() {
+      const items = getLibrary();
+      if (!items.length) {
+        els.library.innerHTML = '<div class="empty">Saved mutation dossiers will live here in this browser.</div>';
+        return;
+      }
+      els.library.innerHTML = items.map((item, index) => `
+        <article class="library-item">
+          <h3>${item.title || dossierTitle(item)}${item.disease ? ` · ${item.disease}` : ""}</h3>
+          <div class="meta">${item.inheritance || "both"} context · updated ${new Date(item.updatedAt || item.createdAt).toLocaleString()}</div>
+          <div class="tags">
+            ${item.literature ? `<span class="tag">Literature ready</span>` : `<span class="tag">No literature saved</span>`}
+            ${item.design ? `<span class="tag">Design ready</span>` : `<span class="tag">No design saved</span>`}
+            ${item.species ? `<span class="tag">${item.species}</span>` : ""}
+            ${item.cellType ? `<span class="tag">${item.cellType}</span>` : ""}
+          </div>
+          <div style="white-space: pre-wrap;">${item.literature ? item.literature.summary : item.design ? `Design saved. Guide: ${item.design.record && item.design.record.selectedGuide ? item.design.record.selectedGuide.guideSeq : "not selected"}; editor: ${item.design.record && item.design.record.editorRecommendation ? item.design.record.editorRecommendation.construct : "not finalized"}.` : "No literature summary saved yet."}</div>
+          <div class="meta">${item.literature ? item.literature.papers.length : 0} saved paper${item.literature && item.literature.papers.length === 1 ? "" : "s"}</div>
+          <div class="actions">
+            <button class="win-button" type="button" data-open-dossier="${index}">Open Dossier</button>
+            ${item.literature ? `<button class="win-button secondary" type="button" data-open-literature="${index}">Explore Literature</button>` : ""}
+            ${item.design ? `<button class="win-button primary" type="button" data-open-design="${index}">Open Design</button>` : ""}
+            <button class="win-button" type="button" data-delete="${index}">Delete</button>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function currentRecord() {
+      const gene = clean(els.gene.value);
+      const mutation = currentTargetText();
+      const paperCards = Array.from(els.papers.querySelectorAll(".paper"));
+      return {
+        id: dossierId({ gene, mutation }),
+        title: dossierTitle({ gene, mutation }),
+        gene,
+        mutation,
+        disease: clean(els.disease.value),
+        cellType: clean(els.cellType.value),
+        inheritance: els.inheritance.value,
+        targetType: els.targetType.value,
+        targetInput: mutation,
+        exonTarget: els.targetType.value === "exon" ? clean(els.exonTarget.value) : "",
+        domainTarget: els.targetType.value === "protein_domain" ? clean(els.domainTarget.value) : "",
+        literature: {
+          summary: els.summary.textContent,
+          query: lastSearchRecord ? lastSearchRecord.query : buildQuery(),
+          papers: paperCards.map((card) => {
+            const link = card.querySelector("h3 a");
+            const snippet = card.querySelector("div:last-child");
+            return {
+              title: link ? link.textContent : "Untitled paper",
+              url: link ? link.href : "#",
+              snippet: snippet ? snippet.textContent : "",
+              kind: card.dataset.kind || "primary",
+              originLabel: card.dataset.originLabel || ""
+            };
+          }),
+          savedAt: new Date().toISOString()
+        }
+      };
+    }
+
+    function loadLiteratureDossier(item) {
+      if (!item) return;
+      els.gene.value = item.gene || "";
+      els.mutation.value = item.mutation || "";
+      els.targetType.value = item.targetType || "mutation_codon";
+      if (els.exonTarget) {
+        const exonValue = item.exonTarget || "";
+        els.exonTarget.innerHTML = exonValue ? `<option value="${exonValue}">Exon ${exonValue} (current target)</option>` : '<option value="">Load exon options first</option>';
+        els.exonTarget.value = exonValue;
+        els.exonTarget.disabled = !exonValue;
+      }
+      if (els.domainTarget) {
+        const domainValue = item.domainTarget || "";
+        els.domainTarget.innerHTML = domainValue ? `<option value="${domainValue}">${domainValue} (current target)</option>` : '<option value="">Load protein-domain options first</option>';
+        els.domainTarget.value = domainValue;
+        els.domainTarget.disabled = !domainValue;
+      }
+      renderTargetInputs();
+      els.disease.value = item.disease || "";
+      els.cellType.value = item.cellType || "";
+      els.inheritance.value = item.inheritance || "both";
+      els.summary.textContent = item.literature && item.literature.summary ? item.literature.summary : "No literature summary saved yet.";
+      lastPapers = item.literature && item.literature.papers ? item.literature.papers.map((paper) => ({
+        ...paper,
+        kind: paper.kind || inferPaperKind(paper)
+      })) : [];
+      renderPapers(lastPapers);
+      lastSearchRecord = {
+        gene: item.gene || "",
+        mutation: item.mutation || "",
+        disease: item.disease || "",
+        cellType: item.cellType || "",
+        inheritance: item.inheritance || "both",
+        query: item.literature && item.literature.query ? item.literature.query : buildQuery(),
+        quotaSummary: item.literature && item.literature.quotaSummary ? item.literature.quotaSummary : null
+      };
+      status("Loaded literature dossier");
+    }
+
+    function renderWorkflowBanner(item) {
+      if (!item || !activeWorkflowIntent || activeWorkflowIntent.id !== item.id || activeWorkflowIntent.intent !== "both") {
+        els.workflowBanner.hidden = true;
+        return;
+      }
+      els.workflowBanner.hidden = false;
+    }
+
+    async function runSearch(options = {}) {
+      const { aiAssist = false } = options;
+      const gene = clean(els.gene.value);
+      if (!gene) {
+        status("Need gene");
+        els.summary.textContent = "Enter a gene symbol first.";
+        return;
+      }
+      const record = {
+        gene,
+        mutation: clean(els.mutation.value),
+        disease: clean(els.disease.value),
+        cellType: clean(els.cellType.value),
+        inheritance: els.inheritance.value
+      };
+      let query = buildQuery();
+      let aiNote = "";
+      status(aiAssist ? "AI planning" : "Searching");
+      setBusy(true, aiAssist
+        ? "MUTATR is planning an AI-assisted literature search for this mutation. First it asks the model to build a better query, then it searches Europe PMC, then it writes the summary."
+        : "MUTATR is searching Europe PMC for the closest matching literature for this mutation.");
+      els.papers.innerHTML = '<div class="loading-box"><b>Working on literature search...</b><span>The results area will update as soon as MUTATR gets a usable query and papers back.</span></div>';
+      if (aiAssist) {
+        try {
+          const aiQuery = await buildAiSearchQuery(record);
+          if (aiQuery && aiQuery.query) {
+            query = aiQuery.query;
+            aiNote = aiQuery.note || "";
+          }
+          els.summary.textContent = "AI query planning finished. MUTATR is now searching Europe PMC with the strongest candidate query it found.";
+        } catch (error) {
+          aiNote = `AI query assist was unavailable, so MUTATR fell back to the normal literature search. Reason: ${error.message}`;
+          els.summary.textContent = aiNote;
+          status("Fallback search");
+        }
+      }
+      try {
+        const plans = buildFallbackQueries(record, aiAssist ? query : "");
+        const papers = [];
+        const seen = new Set();
+        const usedPlans = [];
+        for (const plan of plans) {
+          const countsBefore = countKinds(papers);
+          els.summary.textContent = `MUTATR is searching ${plan.label.toLowerCase()} to build up at least ${TARGET_REVIEW_COUNT} reviews and ${TARGET_PRIMARY_COUNT} primary papers if possible. Current count: ${countsBefore.reviews} reviews, ${countsBefore.primary} primary papers.`;
+          const data = await epmcSearch(plan.query);
+          const hits = (data.resultList && data.resultList.result ? data.resultList.result : []);
+          usedPlans.push(plan);
+          for (const hit of hits) {
+            const id = paperIdentity(hit);
+            if (seen.has(id)) continue;
+            seen.add(id);
+            papers.push({
+              ...hit,
+              originLabel: plan.label
+            });
+          }
+          if (quotaReached(papers)) {
+            break;
+          }
+        }
+        lastPapers = papers;
+        const counts = countKinds(papers);
+        const quotaSummary = {
+          reviews: counts.reviews,
+          primary: counts.primary,
+          targetReviews: TARGET_REVIEW_COUNT,
+          targetPrimary: TARGET_PRIMARY_COUNT,
+          metReviewTarget: counts.reviews >= TARGET_REVIEW_COUNT,
+          metPrimaryTarget: counts.primary >= TARGET_PRIMARY_COUNT
+        };
+        let hotspotPapers = [];
+        if (!record.mutation) {
+          try {
+            const hotspotData = await epmcSearch(buildHotspotQuery(record), 50);
+            hotspotPapers = (hotspotData.resultList && hotspotData.resultList.result ? hotspotData.resultList.result : []).map((hit) => ({
+              ...hit,
+              originLabel: "Hotspot search"
+            }));
+          } catch (error) {
+            // Keep the main search intact even if hotspot mining fails.
+          }
+        }
+        lastSearchRecord = {
+          ...record,
+          query: usedPlans.length ? usedPlans[0].query : buildQuery(),
+          fallbackLabel: usedPlans.length ? usedPlans[usedPlans.length - 1].label : "None",
+          usedPlanLabels: usedPlans.map((plan) => plan.label),
+          quotaSummary
+        };
+        const hotspotSource = mutationSearchIsGeneOnly()
+          ? [...papers, ...hotspotPapers.filter((paper) => !seen.has(paperIdentity(paper)))]
+          : papers;
+        renderMutationHotspots(buildGeneMutationSnapshot(record, hotspotSource));
+        renderPapers(papers);
+        const intro = aiAssist
+          ? `AI-assisted query planning ran first.${aiNote ? ` Why: ${aiNote}` : ""}`
+          : "Standard Europe PMC search ran first.";
+        const planSummary = usedPlans.length
+          ? `Broadening path used: ${usedPlans.map((plan) => plan.label).join(" -> ")}`
+          : "No fallback plans were used.";
+        els.searchInfo.textContent = `${intro}\n\n${planSummary}\nStarted with query: ${usedPlans[0] ? usedPlans[0].query : buildQuery()}\nFinal breadth reached: ${usedPlans.length ? usedPlans[usedPlans.length - 1].label : "None"}\nResults gathered: ${counts.reviews} review(s), ${counts.primary} primary paper(s).`;
+        if (aiAssist && papers.length) {
+          status("AI summarizing");
+          els.summary.textContent = "Papers found. MUTATR is now writing an AI summary of the closest matching literature.";
+          try {
+            const aiSummary = await buildAiSummary(record, papers);
+            els.summary.textContent = `${aiSummary}\n\nCoverage: ${counts.reviews}/${TARGET_REVIEW_COUNT} reviews, ${counts.primary}/${TARGET_PRIMARY_COUNT} primary papers.`;
+            status("AI results ready");
+            setBusy(false);
+          } catch (error) {
+            els.summary.textContent = `${summarizePapers(record, papers)}\n\nCoverage: ${counts.reviews}/${TARGET_REVIEW_COUNT} reviews, ${counts.primary}/${TARGET_PRIMARY_COUNT} primary papers.\n\nAI summary fallback note: ${error.message}`;
+            status("Results ready");
+            setBusy(false);
+          }
+        } else {
+          els.summary.textContent = `${summarizePapers(record, papers)}\n\nCoverage: ${counts.reviews}/${TARGET_REVIEW_COUNT} reviews, ${counts.primary}/${TARGET_PRIMARY_COUNT} primary papers.`;
+          status("Results ready");
+          setBusy(false);
+        }
+      } catch (error) {
+        els.summary.textContent = `Search failed: ${error.message}`;
+        renderMutationHotspots([]);
+        els.papers.innerHTML = '<div class="empty">No papers loaded.</div>';
+        status("Search failed");
+        setBusy(false);
+      }
+    }
+
+    async function summarizeCurrentWithAi() {
+      if (!lastPapers.length) {
+        status("No papers");
+        els.summary.textContent = "Run a search first so AI has papers to summarize.";
+        return;
+      }
+      status("AI summarizing");
+      setBusy(true, "MUTATR is reading the current paper set and writing an AI summary.");
+      try {
+        els.summary.textContent = await buildAiSummary(lastSearchRecord || currentRecord(), lastPapers);
+        status("AI summary ready");
+        setBusy(false);
+      } catch (error) {
+        els.summary.textContent = `AI summary failed: ${error.message}`;
+        status("AI failed");
+        setBusy(false);
+      }
+    }
+
+    function saveCurrentSearch() {
+      const gene = clean(els.gene.value);
+      if (!gene || els.summary.textContent === "No search yet.") {
+        status("Nothing to save");
+        return;
+      }
+      upsertDossier(currentRecord());
+      const library = getLibrary();
+      const index = library.findIndex((item) => item.id === dossierId({ gene: clean(els.gene.value), mutation: clean(els.mutation.value) }));
+      if (index >= 0 && lastSearchRecord && lastSearchRecord.quotaSummary) {
+        library[index].literature.quotaSummary = lastSearchRecord.quotaSummary;
+        library[index].literature.usedPlanLabels = lastSearchRecord.usedPlanLabels || [];
+        setLibrary(library);
+      }
+      renderLibrary();
+      status("Saved literature to dossier");
+    }
+
+    function clearSearch() {
+      els.gene.value = "";
+      els.mutation.value = "";
+      els.targetType.value = "mutation_codon";
+      els.exonTarget.innerHTML = '<option value="">Load exon options first</option>';
+      els.exonTarget.disabled = true;
+      els.domainTarget.innerHTML = '<option value="">Load protein-domain options first</option>';
+      els.domainTarget.disabled = true;
+      renderTargetInputs();
+      els.disease.value = "";
+      els.cellType.value = "";
+      els.inheritance.value = "both";
+      els.summary.textContent = "No search yet.";
+      renderMutationHotspots([]);
+      els.papers.innerHTML = '<div class="empty">Important papers will appear here with links once you run a search.</div>';
+      els.searchInfo.textContent = "Enter a gene, then optionally narrow with a mutation, disease, and somatic/germline context. This first pass searches Europe PMC live and builds a summary from the returned abstracts.";
+      lastPapers = [];
+      lastSearchRecord = null;
+      setResultFilter("all");
+      status("Idle");
+      setBusy(false);
+    }
+
+    function continueToDesign() {
+      if (!activeWorkflowIntent || !activeWorkflowIntent.id) return;
+      const item = getLibrary().find((entry) => entry.id === activeWorkflowIntent.id);
+      if (!item) return;
+      localStorage.setItem(OPEN_DOSSIER_KEY, JSON.stringify({ id: activeWorkflowIntent.id, source: "library-both" }));
+      const params = new URLSearchParams({
+        dossierId: item.id,
+        gene: item.gene || "",
+        mutation: item.mutation || "",
+        species: item.species || "homo_sapiens",
+        editingStrategy: item.editingStrategy || "auto_recommend",
+        targetType: item.targetType || "mutation_codon"
+      });
+      if (item.exonTarget) params.set("exonTarget", item.exonTarget);
+      if (item.domainTarget) params.set("domainTarget", item.domainTarget);
+      window.top.location.href = `designer.html?${params.toString()}`;
+    }
+
+    function saveAiSettings() {
+      localStorage.setItem(OPENAI_KEY_STORAGE, getApiKey());
+      localStorage.setItem(OPENAI_MODEL_STORAGE, getApiModel());
+      status("AI settings saved");
+      els.aiNotes.textContent = "AI settings saved in this browser. MUTATR can now use OpenAI for query expansion and summary writing.";
+    }
+
+    function clearAiSettings() {
+      localStorage.removeItem(OPENAI_KEY_STORAGE);
+      localStorage.removeItem(OPENAI_MODEL_STORAGE);
+      els.apiKey.value = "";
+      els.apiModel.value = "gpt-5-mini";
+      status("AI settings cleared");
+      els.aiNotes.textContent = "AI settings cleared from this browser.";
+    }
+
+    async function loadBundledAiKey() {
+      try {
+        const response = await fetch(BUNDLED_KEY_PATH, { cache: "no-store" });
+        if (!response.ok) throw new Error(`Could not load bundled key file (${response.status}).`);
+        const text = await response.text();
+        const key = extractApiKeyFromText(text);
+        if (!key) throw new Error("No OpenAI API key was found in the bundled key file.");
+        els.apiKey.value = key;
+        localStorage.setItem(OPENAI_KEY_STORAGE, key);
+        status("Bundled key loaded");
+        els.aiNotes.textContent = "Optional bundled OpenAI API key loaded into this browser for this MUTATR copy.";
+      } catch (error) {
+        status("Key load failed");
+        els.aiNotes.textContent = `Bundled key load failed: ${error.message}`;
+      }
+    }
+
+    function loadAiKeyFilePicker() {
+      els.apiKeyFileInput.click();
+    }
+
+    async function handleAiKeyFile(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const key = extractApiKeyFromText(text);
+        if (!key) throw new Error("No OpenAI API key was found in the selected file.");
+        els.apiKey.value = key;
+        localStorage.setItem(OPENAI_KEY_STORAGE, key);
+        status("Key file loaded");
+        els.aiNotes.textContent = `Loaded OpenAI API key from ${file.name}.`;
+      } catch (error) {
+        status("Key load failed");
+        els.aiNotes.textContent = `API key file load failed: ${error.message}`;
+      } finally {
+        els.apiKeyFileInput.value = "";
+      }
+    }
+
+    document.addEventListener("click", (event) => {
+      const openDossier = event.target.closest("[data-open-dossier]");
+      const openLiterature = event.target.closest("[data-open-literature]");
+      const openDesign = event.target.closest("[data-open-design]");
+      const del = event.target.closest("[data-delete]");
+      const hotspotExplore = event.target.closest("[data-hotspot-explore]");
+      const hotspotDossier = event.target.closest("[data-hotspot-dossier]");
+      if (openDossier) {
+        const item = getLibrary()[Number(openDossier.dataset.openDossier)];
+        if (!item) return;
+        localStorage.setItem(OPEN_DOSSIER_KEY, JSON.stringify({ id: item.id, source: "library-dossier" }));
+        window.top.location.href = `dossier.html?dossierId=${encodeURIComponent(item.id)}`;
+      }
+      if (openLiterature) {
+        const item = getLibrary()[Number(openLiterature.dataset.openLiterature)];
+        if (!item) return;
+        loadLiteratureDossier(item);
+      }
+      if (openDesign) {
+        const item = getLibrary()[Number(openDesign.dataset.openDesign)];
+        if (!item) return;
+        localStorage.setItem(OPEN_DOSSIER_KEY, JSON.stringify({ id: item.id, source: "library-design" }));
+        const params = new URLSearchParams({
+          dossierId: item.id,
+          gene: item.gene || "",
+          mutation: item.mutation || "",
+          species: item.species || "homo_sapiens",
+          editingStrategy: item.editingStrategy || "auto_recommend",
+          targetType: item.targetType || "mutation_codon"
+        });
+        if (item.exonTarget) params.set("exonTarget", item.exonTarget);
+        if (item.domainTarget) params.set("domainTarget", item.domainTarget);
+        window.top.location.href = `designer.html?${params.toString()}`;
+      }
+      if (del) {
+        const library = getLibrary();
+        library.splice(Number(del.dataset.delete), 1);
+        setLibrary(library);
+        renderLibrary();
+        status("Deleted");
+      }
+      if (hotspotExplore) {
+        const item = lastHotspotMutations[Number(hotspotExplore.dataset.hotspotExplore)];
+        if (!item) return;
+        els.targetType.value = "mutation_codon";
+        renderTargetInputs();
+        els.mutation.value = item.mutation;
+        if (!clean(els.disease.value) && item.disease && item.disease !== "context unclear") {
+          els.disease.value = item.disease;
+        }
+        if (item.inheritance === "somatic" || item.inheritance === "germline") {
+          els.inheritance.value = item.inheritance;
+        }
+        runSearch();
+      }
+      if (hotspotDossier) {
+        const item = lastHotspotMutations[Number(hotspotDossier.dataset.hotspotDossier)];
+        if (!item) return;
+        const gene = clean(els.gene.value);
+        const dossier = upsertDossier({
+          id: dossierId({ gene, mutation: item.mutation }),
+          gene,
+          mutation: item.mutation,
+          disease: item.disease && item.disease !== "context unclear" ? item.disease : clean(els.disease.value),
+          cellType: clean(els.cellType.value),
+          inheritance: item.inheritance === "somatic" || item.inheritance === "germline" ? item.inheritance : els.inheritance.value,
+          species: "homo_sapiens",
+          targetType: "mutation_codon",
+          targetInput: item.mutation
+        });
+        renderLibrary();
+        status(`Created dossier for ${dossier.title}`);
+      }
+    });
+
+    els.search.addEventListener("click", () => runSearch());
+    els.searchAi.addEventListener("click", () => runSearch({ aiAssist: true }));
+    els.saveSearch.addEventListener("click", saveCurrentSearch);
+    els.clearSearch.addEventListener("click", clearSearch);
+    els.targetType.addEventListener("change", renderTargetInputs);
+    els.loadTargetOptions.addEventListener("click", loadTargetOptions);
+    els.filterAll.addEventListener("click", () => setResultFilter("all"));
+    els.filterReviews.addEventListener("click", () => setResultFilter("reviews"));
+    els.filterPrimary.addEventListener("click", () => setResultFilter("primary"));
+    els.saveAiSettings.addEventListener("click", saveAiSettings);
+    els.loadBundledAiKey.addEventListener("click", loadBundledAiKey);
+    els.loadAiKeyFile.addEventListener("click", loadAiKeyFilePicker);
+    els.apiKeyFileInput.addEventListener("change", handleAiKeyFile);
+    els.clearAiSettings.addEventListener("click", clearAiSettings);
+    els.continueToDesign.addEventListener("click", continueToDesign);
+
+    els.apiKey.value = localStorage.getItem(OPENAI_KEY_STORAGE) || "";
+    els.apiModel.value = localStorage.getItem(OPENAI_MODEL_STORAGE) || "gpt-5-mini";
+    try {
+      activeWorkflowIntent = JSON.parse(localStorage.getItem(FLOW_KEY) || "null");
+    } catch (error) {
+      activeWorkflowIntent = null;
+    }
+
+    const queryDossierId = new URLSearchParams(window.location.search).get("dossierId");
+    try {
+      const pending = JSON.parse(localStorage.getItem(OPEN_DOSSIER_KEY) || "null");
+      const targetId = queryDossierId || (pending && pending.id);
+      if (targetId) {
+        const item = getLibrary().find((entry) => entry.id === targetId);
+        if (item) {
+          loadLiteratureDossier(item);
+          renderWorkflowBanner(item);
+        }
+        localStorage.removeItem(OPEN_DOSSIER_KEY);
+      }
+    } catch (error) {
+      localStorage.removeItem(OPEN_DOSSIER_KEY);
+    }
+
+    renderLibrary();
+    setResultFilter("all");
+    renderTargetInputs();
+    if (EMBEDDED) {
+      document.body.classList.add("embedded");
+    }
+  </script>
+</body>
+</html>

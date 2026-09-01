@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MUTATR</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #0f2b18;
+      --panel: #d7d7d7;
+      --panel-shadow: #808080;
+      --panel-highlight: #f6f6f6;
+      --green: #2f8a57;
+      --green-2: #3fa865;
+      --purple: #5d2f8e;
+      --purple-2: #3a215f;
+      --yellow: #ffec59;
+      --ink: #121212;
+      --muted: #33443a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top, rgba(101, 210, 123, 0.25), transparent 28%),
+        linear-gradient(180deg, #123a22 0%, #102816 100%);
+      color: var(--ink);
+      font-family: "Trebuchet MS", Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.4;
+      padding: 24px;
+    }
+
+    .desktop {
+      width: min(1240px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .window {
+      border: 2px solid #111;
+      background: var(--panel);
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 var(--panel-shadow),
+        0 22px 40px rgba(0, 0, 0, 0.28);
+      overflow: clip;
+    }
+
+    .titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 42px;
+      padding: 8px 12px;
+      background: linear-gradient(90deg, var(--green) 0%, #266248 100%);
+      border-bottom: 2px solid #111;
+      color: white;
+      font-weight: 700;
+    }
+
+    .titlebar small {
+      opacity: 0.9;
+      font-weight: 600;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 2px solid #111;
+      background: linear-gradient(180deg, #dce5db 0%, #ccd7cb 100%);
+    }
+
+    .toolbar-title {
+      font-weight: 800;
+      color: #24352b;
+      margin-right: auto;
+    }
+
+    .toolbar-button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .hero {
+      padding: 26px;
+      display: grid;
+      grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+      gap: 26px;
+      align-items: center;
+      background:
+        linear-gradient(180deg, rgba(93, 47, 142, 0.12), rgba(255, 255, 255, 0)),
+        linear-gradient(180deg, #d6e0d5 0%, #c5d4c3 100%);
+    }
+
+    .cat-frame {
+      padding: 8px;
+      border: 2px solid #111;
+      background: linear-gradient(180deg, #1a532f 0%, #113820 100%);
+      box-shadow: inset 2px 2px 0 rgba(255,255,255,0.3), inset -2px -2px 0 rgba(0,0,0,0.35);
+    }
+
+    .cat-frame img {
+      display: block;
+      width: 100%;
+      height: auto;
+      image-rendering: pixelated;
+      border: 2px solid #111;
+      background: #102816;
+    }
+
+    .hero-copy {
+      display: grid;
+      gap: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .brand-mark {
+      width: 16px;
+      height: 16px;
+      background: var(--purple);
+      border: 2px solid #111;
+      box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--yellow);
+      font-family: "Courier New", Courier, monospace;
+      font-size: clamp(32px, 6vw, 64px);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-shadow:
+        2px 0 0 #4c3600,
+        0 2px 0 #4c3600,
+        2px 2px 0 #4c3600,
+        4px 4px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .hero-copy p {
+      margin: 0;
+      max-width: 680px;
+      font-size: 17px;
+      color: #16211c;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .win-button {
+      appearance: none;
+      text-decoration: none;
+      color: var(--ink);
+      background: var(--panel);
+      border: 2px solid #111;
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 var(--panel-shadow);
+      min-height: 42px;
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .win-button.primary {
+      background: #d8f0de;
+    }
+
+    .win-button.secondary {
+      background: #eadcf9;
+    }
+
+    .win-button.active {
+      background: #dbe9ff;
+    }
+
+    .win-button:active {
+      box-shadow:
+        inset -2px -2px 0 var(--panel-highlight),
+        inset 2px 2px 0 var(--panel-shadow);
+      transform: translate(1px, 1px);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      padding: 0 18px 18px;
+      background: linear-gradient(180deg, #d6e0d5 0%, #c5d4c3 100%);
+    }
+
+    .card {
+      border: 2px solid #111;
+      background: #eef3ee;
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 #9ca6a3;
+      padding: 16px;
+      min-height: 172px;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .card-button {
+      appearance: none;
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .card-button:hover {
+      background: #f4f8f4;
+    }
+
+    .card-button:active {
+      box-shadow:
+        inset -2px -2px 0 var(--panel-highlight),
+        inset 2px 2px 0 #9ca6a3;
+      transform: translate(1px, 1px);
+    }
+
+    .card h2 {
+      margin: 0;
+      font-size: 18px;
+      color: #1c2f26;
+    }
+
+    .card p {
+      margin: 0;
+      color: #2d3a35;
+    }
+
+    .mini {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 4px 8px;
+      border: 2px solid #111;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .workspace {
+      background: linear-gradient(180deg, #d6e0d5 0%, #c5d4c3 100%);
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .workspace[hidden],
+    .landing[hidden] {
+      display: none;
+    }
+
+    .workspace-card {
+      border: 2px solid #111;
+      background: #eff4ef;
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 #9ca6a3;
+      overflow: clip;
+    }
+
+    .recent-strip {
+      display: grid;
+      gap: 10px;
+      padding: 0 18px 18px;
+      background: linear-gradient(180deg, #d6e0d5 0%, #c5d4c3 100%);
+    }
+
+    .recent-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .recent-item {
+      border: 2px solid #111;
+      background: white;
+      box-shadow:
+        inset 2px 2px 0 var(--panel-highlight),
+        inset -2px -2px 0 #9ca6a3;
+      padding: 12px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .recent-item h3 {
+      margin: 0;
+      font-size: 17px;
+      color: #1c2f26;
+    }
+
+    .recent-meta {
+      color: #40584e;
+      font-size: 13px;
+    }
+
+    .recent-actions {
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .mini-button {
+      min-height: 30px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
+    .footer-tools {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    iframe {
+      display: block;
+      width: 100%;
+      min-height: 78vh;
+      border: 0;
+      background: white;
+    }
+
+    footer {
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      background: linear-gradient(180deg, #d9dfd7 0%, #c7d2c4 100%);
+      border-top: 2px solid #111;
+      color: #22352b;
+      font-size: 14px;
+    }
+
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .recent-list {
+        grid-template-columns: 1fr;
+      }
+
+      iframe {
+        min-height: 84vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="desktop">
+    <section class="window">
+      <div class="titlebar">
+        <span>MUTATR.EXE</span>
+        <small>Mutation workbench</small>
+      </div>
+      <div class="toolbar">
+        <span class="toolbar-title" id="toolbarTitle">Home</span>
+        <div class="toolbar-button-group" id="toolbarButtons">
+          <button class="win-button" id="homeBtn" type="button">Home</button>
+          <button class="win-button secondary" id="libraryBtn" type="button">Mutation Directory</button>
+          <button class="win-button secondary" id="dossierBtn" type="button">Current Dossier</button>
+          <button class="win-button primary" id="newBtn" type="button">New Mutation</button>
+        </div>
+      </div>
+
+      <div class="landing" id="landing">
+        <div class="hero">
+          <div class="cat-frame">
+            <img src="mutatrcat.png" alt="MUTATR cat mascot">
+          </div>
+          <div class="hero-copy">
+            <div class="brand">
+              <span class="brand-mark" aria-hidden="true"></span>
+              <h1>MUTATR</h1>
+            </div>
+            <p>
+              A dossier-first home base for sgRNA and base-editor design, literature tracking,
+              mutation-specific notes, and cross-checking before anything gets ordered.
+            </p>
+          </div>
+        </div>
+        <section class="grid">
+          <button class="card card-button" id="landingLibraryBtn" type="button">
+            <span class="mini">Directory</span>
+            <h2>Mutation Directory</h2>
+            <p>
+              Save each mutation as a dossier, then branch into literature, design,
+              notes, and expected files from one place.
+            </p>
+          </button>
+          <button class="card card-button" id="landingDossierBtn" type="button">
+            <span class="mini">Dossier</span>
+            <h2>Current Dossier</h2>
+            <p>
+              Treat each mutation like a working folder with an overview, literature,
+              design summary, notes, and file expectations.
+            </p>
+          </button>
+          <button class="card card-button" id="landingNewBtn" type="button">
+            <span class="mini">New</span>
+            <h2>New Mutation</h2>
+            <p>
+              Enter the mutation once, create the dossier immediately, and then choose
+              whether to search literature, design CRISPR strategy, or do both.
+            </p>
+          </button>
+        </section>
+        <section class="recent-strip">
+          <article class="card">
+            <span class="mini">Recent</span>
+            <h2>Recent Mutations</h2>
+            <p>Jump back into the mutation dossiers you touched most recently.</p>
+          </article>
+          <div class="recent-list" id="recentList">
+            <div class="card"><p>No mutation dossiers saved yet.</p></div>
+          </div>
+        </section>
+        <footer>
+          <span>Windows 98 energy, mutation dossier workflow.</span>
+          <span class="footer-tools">
+            <span>Directory first, then literature and design.</span>
+            <button class="win-button mini-button" id="landingSettingsBtn" type="button">Settings</button>
+          </span>
+        </footer>
+      </div>
+
+      <div class="workspace" id="workspace" hidden>
+        <div class="workspace-card">
+          <iframe id="workspaceFrame" title="MUTATR workspace"></iframe>
+        </div>
+        <footer>
+          <span id="workspaceFooter">Use the directory to choose a mutation, then keep literature and design attached to the same dossier.</span>
+          <span>Current pass still uses embedded workspaces, but the flow is now dossier-first.</span>
+        </footer>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const els = {};
+    document.querySelectorAll("[id]").forEach((el) => { els[el.id] = el; });
+    const APP_VERSION = "2026-05-05-mutatr-reset-2";
+    const LIBRARY_KEY = "mutatrLibrary";
+    const CURRENT_DOSSIER_KEY = "mutatrCurrentDossier";
+
+    function getLibrary() {
+      try {
+        const request = new XMLHttpRequest();
+        request.open("GET", "/api/library", false);
+        request.send();
+        if (request.status >= 200 && request.status < 300) {
+          const payload = JSON.parse(request.responseText || "{}");
+          const items = Array.isArray(payload.items) ? payload.items : [];
+          localStorage.setItem(LIBRARY_KEY, JSON.stringify(items));
+          return items;
+        }
+      } catch (error) {}
+      try {
+        return JSON.parse(localStorage.getItem(LIBRARY_KEY) || "[]");
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function versionedUrl(url) {
+      const absolute = new URL(url, window.location.href);
+      absolute.searchParams.set("v", APP_VERSION);
+      return absolute.toString();
+    }
+
+    function directNavigate(url) {
+      window.location.assign(versionedUrl(url));
+    }
+
+    function openCurrentDossier() {
+      const currentId = localStorage.getItem(CURRENT_DOSSIER_KEY);
+      if (currentId) {
+        directNavigate(`dossier.html?dossierId=${encodeURIComponent(currentId)}`);
+        return;
+      }
+      const first = getLibrary()[0];
+      if (first && first.id) {
+        localStorage.setItem(CURRENT_DOSSIER_KEY, first.id);
+        directNavigate(`dossier.html?dossierId=${encodeURIComponent(first.id)}`);
+        return;
+      }
+      directNavigate("explore.html");
+    }
+
+    function renderRecentMutations() {
+      const recent = getLibrary().slice(0, 3);
+      if (!recent.length) {
+        els.recentList.innerHTML = '<div class="card"><p>No mutation dossiers saved yet.</p></div>';
+        return;
+      }
+      els.recentList.innerHTML = recent.map((item) => `
+        <article class="recent-item">
+          <h3>${item.title || `${item.gene || "Gene"} ${item.mutation || ""}`.trim()}</h3>
+          <div class="recent-meta">${item.literature ? "Literature ready" : "No literature yet"} · ${item.design ? "Design ready" : "No design yet"}</div>
+          <div class="recent-meta">${item.updatedAt ? `Updated ${new Date(item.updatedAt).toLocaleString()}` : "Recently created"}</div>
+          <div class="recent-actions">
+            <button class="win-button mini-button" type="button" data-recent-id="${item.id}">Open Dossier</button>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    els.homeBtn.addEventListener("click", () => directNavigate("mutatr.html"));
+    els.libraryBtn.addEventListener("click", () => directNavigate("explore.html"));
+    els.dossierBtn.addEventListener("click", openCurrentDossier);
+    els.newBtn.addEventListener("click", () => directNavigate("new-mutation.html"));
+    els.landingLibraryBtn.addEventListener("click", () => directNavigate("explore.html"));
+    els.landingDossierBtn.addEventListener("click", openCurrentDossier);
+    els.landingNewBtn.addEventListener("click", () => directNavigate("new-mutation.html"));
+    els.landingSettingsBtn.addEventListener("click", () => directNavigate("settings.html"));
+
+    document.addEventListener("click", (event) => {
+      const recent = event.target.closest("[data-recent-id]");
+      if (!recent) return;
+      localStorage.setItem(CURRENT_DOSSIER_KEY, recent.dataset.recentId);
+      directNavigate(`dossier.html?dossierId=${encodeURIComponent(recent.dataset.recentId)}`);
+    });
+
+    renderRecentMutations();
+  </script>
+</body>
+</html>

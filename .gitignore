@@ -1,2 +1,11 @@
 .DS_Store
 *.zip
+Backend/MUTATROpenAIAPIKey.rtf
+TODO.md
+.test-venv/
+Backend/.venv-browser/
+Backend/.venv-test/
+Backend/.mutatr-runtime/
+Backend/__pycache__/
+**/__pycache__/
+*.pyc
