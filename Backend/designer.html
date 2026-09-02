@@ -970,7 +970,7 @@
           <div class="section-head">
             <div>
               <h2>Guides</h2>
-              <p id="guidesSubtitle">Candidate protospacers scored by target position and same-base bystanders inside the chosen window.</p>
+              <p id="guidesSubtitle">Candidate protospacers scored using a core target window and a broader bystander-review window.</p>
             </div>
             <span class="pill" id="guideState">Waiting</span>
           </div>
@@ -998,10 +998,10 @@
             </div>
             <div class="guide-command-row">
               <div class="window-fields" id="windowFields">
-                <label>Window start
+                <label>Core start
                   <input id="windowStart" type="number" min="1" max="20" value="4">
                 </label>
-                <label>Window end
+                <label>Core end
                   <input id="windowEnd" type="number" min="1" max="20" value="8">
                 </label>
               </div>
@@ -1026,9 +1026,9 @@
                     <th id="casHeader">Cas system</th>
                     <th>Strand</th>
                     <th id="targetPosHeader">Target pos</th>
-                    <th id="windowHeader">Window</th>
+                    <th id="windowHeader">Core / review</th>
                     <th id="codonHeader">Codon edit</th>
-                    <th id="bystanderHeader">Bystanders</th>
+                    <th id="bystanderHeader">Extended bystanders</th>
                     <th>Notes</th>
                   </tr>
                 </thead>
@@ -1071,7 +1071,7 @@
               <label class="span-4"><span id="deliveryMethodLabel">Delivery method</span>
                 <select id="deliveryMethod">
                   <option>crRNA + tracrRNA</option>
-                  <option>synthetic sgRNA</option>
+                  <option selected>synthetic sgRNA</option>
                   <option>U6 sgRNA expression plasmid</option>
                 </select>
               </label>
@@ -1211,7 +1211,7 @@
                 </label>
                 <label class="check-item">
                   <input type="checkbox" data-check="bystanders">
-                  <span>I reviewed same-base bystanders in the editing window.</span>
+                  <span>I reviewed individual and combined bystander outcomes across the extended activity window.</span>
                 </label>
                 <label class="check-item">
                   <input type="checkbox" data-check="construct">
@@ -1436,6 +1436,8 @@
         editor: "CBE",
         start: 4,
         end: 8,
+        reviewStart: 3,
+        reviewEnd: 10,
         construct: "BE4max family",
         note: "Default CBE preset for C to T or opposite-strand G to A edits."
       },
@@ -1444,6 +1446,8 @@
         editor: "ABE",
         start: 4,
         end: 7,
+        reviewStart: 3,
+        reviewEnd: 9,
         construct: "ABE8e family",
         note: "Default high-efficiency ABE preset for A to G or opposite-strand T to C edits."
       },
@@ -1452,6 +1456,8 @@
         editor: "ABE",
         start: 4,
         end: 7,
+        reviewStart: 3,
+        reviewEnd: 9,
         construct: "Standard ABE family",
         note: "Conservative ABE preset; consider this when precision matters more than maximum activity."
       },
@@ -1460,6 +1466,8 @@
         editor: "any",
         start: 5,
         end: 7,
+        reviewStart: 4,
+        reviewEnd: 8,
         construct: "Precision/narrow editor family",
         note: "Narrower discovery window for loci where bystander edits are a concern."
       }
@@ -1781,8 +1789,8 @@
       if (usesBaseEditingFlow()) {
         const reasons = [];
         reasons.push(`ranked #${guide.rank} because it keeps the target at guide position ${guide.targetGuidePos}`);
-        if (guide.bystanders === 0) reasons.push("has a clean editing window with no same-base bystanders");
-        else reasons.push(`has ${guide.bystanders} same-base bystander${guide.bystanders === 1 ? "" : "s"}`);
+        if (guide.bystanders === 0) reasons.push(`has no editable bystanders in the extended ${guide.reviewWindowRange || guide.windowRange} review window`);
+        else reasons.push(`has ${guide.bystanders} extended-window bystander${guide.bystanders === 1 ? "" : "s"}: ${guide.bystanderSummary || "review possible outcomes"}`);
         if (guide.pamModeUsed) reasons.push(`uses ${pamModeLabel(guide.pamModeUsed)}`);
         if (guide.pamQuality && guide.pamQuality.label !== "matched") reasons.push(guide.pamQuality.label.toLowerCase());
         return `Auto-selected because it ${reasons.join(", ")}.`;
@@ -1797,6 +1805,14 @@
         return `Auto-selected because this guide pair ranks #${guide.rank}, is scored as ${guide.priority || "a deletion candidate"}, and predicts a ${guide.bystanders} bp deletion while flanking the target cleanly.`;
       }
       return `Auto-selected candidate ranked #${guide.rank}.`;
+    }
+
+    function guideDeliveryWarning(guide) {
+      if (!guide || !guide.guideSeq.includes("TTTT")) return "";
+      if (els.deliveryMethod.value === "U6 sgRNA expression plasmid") {
+        return "Poly-T warning: TTTT may terminate Pol III/U6 transcription; consider another guide or expression architecture.";
+      }
+      return "TTTT is present, but it is not a Pol III termination concern for synthetic sgRNA or crRNA delivery.";
     }
 
     function countCodonDiffs(a, b) {
@@ -2245,6 +2261,22 @@
         };
       }
       return { key: selectedValue, ...editorPresets[selectedValue] };
+    }
+
+    function activeReviewWindow(coreStart = Number(els.windowStart.value), coreEnd = Number(els.windowEnd.value)) {
+      const preset = activeEditorPreset();
+      if (preset && preset.key !== "custom" && Number.isInteger(preset.reviewStart) && Number.isInteger(preset.reviewEnd)) {
+        const leftExtension = Math.max(0, preset.start - preset.reviewStart);
+        const rightExtension = Math.max(0, preset.reviewEnd - preset.end);
+        return {
+          start: Math.max(1, coreStart - leftExtension),
+          end: Math.min(20, coreEnd + rightExtension)
+        };
+      }
+      return {
+        start: Math.max(1, coreStart - 1),
+        end: Math.min(20, coreEnd + 1)
+      };
     }
 
     function applyEditorPreset(force = false) {
@@ -3260,6 +3292,140 @@
       return protospacerStart + 20 - route.targetContextIndex;
     }
 
+    function guidePositionToContextIndex(strand, refStart, guidePosition) {
+      return strand === "+" ? refStart + guidePosition - 1 : refStart + 20 - guidePosition;
+    }
+
+    function editedCodingBase(targetEditableBase, strand) {
+      const editedGuideBase = targetEditableBase === "A" ? "G" : targetEditableBase === "C" ? "T" : targetEditableBase;
+      return strand === "+" ? editedGuideBase : revComp(editedGuideBase);
+    }
+
+    function baseEditOutcome(route, strand, refStart, guidePosition, codingSeq) {
+      const contextIndex = guidePositionToContextIndex(strand, refStart, guidePosition);
+      const targetCodonStart = route.targetContextIndex - route.codonIndex;
+      const codonOffset = Math.floor((contextIndex - targetCodonStart) / 3);
+      const codonStart = targetCodonStart + (codonOffset * 3);
+      const before = codingSeq.slice(codonStart, codonStart + 3);
+      if (contextIndex < 0 || contextIndex >= codingSeq.length || before.length !== 3) {
+        return {
+          guidePosition,
+          contextIndex,
+          codonOffset,
+          classification: "context-only",
+          label: `position ${guidePosition}: editable base outside translated local context`
+        };
+      }
+      const afterBases = before.split("");
+      afterBases[contextIndex - codonStart] = editedCodingBase(route.editStrand === "coding" ? route.from : revComp(route.from), strand);
+      const after = afterBases.join("");
+      const aaBefore = geneticCode[before] || "?";
+      const aaAfter = geneticCode[after] || "?";
+      const mutation = parseMutation(els.mutation.value);
+      const aaPosition = mutation && Number.isInteger(mutation.aaPos) ? mutation.aaPos + codonOffset : null;
+      const aaChange = `${aaBefore}${aaPosition || ""}${aaAfter}`;
+      const classification = aaBefore === aaAfter
+        ? "synonymous"
+        : aaAfter === "*"
+          ? "nonsense"
+          : aaBefore === "*"
+            ? "stop-loss"
+            : "missense";
+      return {
+        guidePosition,
+        contextIndex,
+        codonOffset,
+        codonStart,
+        codonBefore: before,
+        codonAfter: after,
+        aaBefore,
+        aaAfter,
+        aaPosition,
+        aaChange,
+        classification,
+        sameTargetCodon: codonOffset === 0,
+        label: `position ${guidePosition}: ${before}>${after} (${aaChange}, ${classification})`
+      };
+    }
+
+    function analyzeBaseEditingOutcomes(route, strand, refStart, guideSeq, targetGuidePos, targetEditableBase, coreStart, coreEnd, reviewStart, reviewEnd) {
+      const codingSeq = getCodingSeq();
+      const editablePositions = [];
+      for (let position = reviewStart; position <= reviewEnd; position += 1) {
+        if (guideSeq[position - 1] === targetEditableBase) editablePositions.push(position);
+      }
+      const bystanderPositions = editablePositions.filter((position) => position !== targetGuidePos);
+      const coreBystanderPositions = bystanderPositions.filter((position) => position >= coreStart && position <= coreEnd);
+      const consequences = bystanderPositions.map((position) => baseEditOutcome(route, strand, refStart, position, codingSeq));
+
+      const combinedSeq = codingSeq.split("");
+      editablePositions.forEach((position) => {
+        const contextIndex = guidePositionToContextIndex(strand, refStart, position);
+        if (contextIndex >= 0 && contextIndex < combinedSeq.length) {
+          combinedSeq[contextIndex] = editedCodingBase(targetEditableBase, strand);
+        }
+      });
+      const targetCodonStart = route.targetContextIndex - route.codonIndex;
+      const affectedCodonStarts = [...new Set(editablePositions.map((position) => {
+        const contextIndex = guidePositionToContextIndex(strand, refStart, position);
+        return targetCodonStart + (Math.floor((contextIndex - targetCodonStart) / 3) * 3);
+      }))].sort((a, b) => a - b);
+      const mutation = parseMutation(els.mutation.value);
+      const combinedConsequences = affectedCodonStarts.map((codonStart) => {
+        const before = codingSeq.slice(codonStart, codonStart + 3);
+        const after = combinedSeq.slice(codonStart, codonStart + 3).join("");
+        const codonOffset = Math.floor((codonStart - targetCodonStart) / 3);
+        const aaBefore = geneticCode[before] || "?";
+        const aaAfter = geneticCode[after] || "?";
+        const aaPosition = mutation && Number.isInteger(mutation.aaPos) ? mutation.aaPos + codonOffset : null;
+        return {
+          codonOffset,
+          codonBefore: before,
+          codonAfter: after,
+          aaBefore,
+          aaAfter,
+          aaPosition,
+          aaChange: `${aaBefore}${aaPosition || ""}${aaAfter}`,
+          sameTargetCodon: codonOffset === 0
+        };
+      });
+      const desiredAa = geneticCode[route.desiredCodon] || "?";
+      const unintendedCombined = combinedConsequences.filter((outcome) => !outcome.sameTargetCodon || outcome.aaAfter !== desiredAa);
+      const consequenceRisk = (outcome) => {
+        if (!outcome || outcome.classification === "context-only") return 2;
+        if (outcome.sameTargetCodon && outcome.aaAfter !== desiredAa) return 10;
+        if (outcome.classification === "nonsense") return 10;
+        if (outcome.classification === "stop-loss") return 9;
+        if (outcome.classification === "missense") return 6;
+        if (outcome.classification === "synonymous") return 1;
+        return 2;
+      };
+      const individualRisk = consequences.reduce((total, outcome) => total + consequenceRisk(outcome), 0);
+      const combinedRisk = unintendedCombined.reduce((highest, outcome) => {
+        if (outcome.sameTargetCodon && outcome.aaAfter !== desiredAa) return Math.max(highest, 10);
+        if (outcome.aaAfter === "*") return Math.max(highest, 10);
+        if (outcome.aaBefore !== outcome.aaAfter) return Math.max(highest, 6);
+        return Math.max(highest, 1);
+      }, 0);
+      const hasNonsynonymousBystander = consequences.some((outcome) => outcome.classification !== "synonymous")
+        || unintendedCombined.some((outcome) => outcome.aaBefore !== outcome.aaAfter);
+      const individualSummary = consequences.map((outcome) => outcome.label).join("; ");
+      const combinedSummary = unintendedCombined.map((outcome) => `${outcome.codonBefore}>${outcome.codonAfter} (${outcome.aaChange})`).join("; ");
+      return {
+        editablePositions,
+        bystanderPositions,
+        coreBystanderPositions,
+        consequences,
+        combinedConsequences,
+        unintendedCombined,
+        bystanderRiskScore: individualRisk + combinedRisk,
+        hasNonsynonymousBystander,
+        summary: bystanderPositions.length
+          ? `${individualSummary}${combinedSummary ? `; combined outcome: ${combinedSummary}` : ""}`
+          : `No editable bystanders at positions ${reviewStart}-${reviewEnd}.`
+      };
+    }
+
     function scanGuides() {
       applyEditorPreset();
       const seq = getCodingSeq();
@@ -3267,6 +3433,7 @@
       const mode = els.pamMode.value;
       const winStart = Number(els.windowStart.value);
       const winEnd = Number(els.windowEnd.value);
+      const reviewWindow = activeReviewWindow(winStart, winEnd);
       if (!seq || !route) return [];
       if (!usesBaseEditingFlow()) {
         return scanNonBaseGuides(seq, route, mode);
@@ -3284,7 +3451,7 @@
           const plusPam = seq.slice(i + 20, i + 23);
           if (pamMatches(plusPam, scanMode, "+")) {
             const targetPos = guideTargetPos(route, "+", i);
-            addGuide(guides, seen, route, "+", i, plusProto, plusPam, targetPos, targetEditableBase, winStart, winEnd, scanMode);
+            addGuide(guides, seen, route, "+", i, plusProto, plusPam, targetPos, targetEditableBase, winStart, winEnd, reviewWindow.start, reviewWindow.end, scanMode);
           }
 
           const minusPam = seq.slice(i, i + 3);
@@ -3292,7 +3459,7 @@
           if (pamMatches(minusPam, scanMode, "-")) {
             const guide = revComp(minusProtoOnReference);
             const targetPos = guideTargetPos(route, "-", i + 3);
-            addGuide(guides, seen, route, "-", i + 3, guide, minusPam, targetPos, targetEditableBase, winStart, winEnd, scanMode);
+            addGuide(guides, seen, route, "-", i + 3, guide, minusPam, targetPos, targetEditableBase, winStart, winEnd, reviewWindow.start, reviewWindow.end, scanMode);
           }
         }
       }
@@ -3300,7 +3467,7 @@
       const modeScore = (value) => value === "NGG" ? 0 : value === "NGN" ? 1 : 2;
       return guides
         .filter((guide) => guide.targetInWindow)
-        .sort((a, b) => a.bystanders - b.bystanders || modeScore(a.pamModeUsed || mode) - modeScore(b.pamModeUsed || mode) || a.pamQuality.score - b.pamQuality.score || Math.abs(a.targetGuidePos - ((winStart + winEnd) / 2)) - Math.abs(b.targetGuidePos - ((winStart + winEnd) / 2)))
+        .sort((a, b) => a.bystanderRiskScore - b.bystanderRiskScore || a.bystanders - b.bystanders || modeScore(a.pamModeUsed || mode) - modeScore(b.pamModeUsed || mode) || a.pamQuality.score - b.pamQuality.score || Math.abs(a.targetGuidePos - ((winStart + winEnd) / 2)) - Math.abs(b.targetGuidePos - ((winStart + winEnd) / 2)))
         .map((guide, index) => ({ ...guide, rank: index + 1 }));
     }
 
@@ -3464,13 +3631,12 @@
         .map((guide, index) => ({ ...guide, rank: index + 1 }));
     }
 
-    function addGuide(guides, seen, route, strand, refStart, guideSeq, pam, targetGuidePos, targetEditableBase, winStart, winEnd, pamMode) {
+    function addGuide(guides, seen, route, strand, refStart, guideSeq, pam, targetGuidePos, targetEditableBase, winStart, winEnd, reviewStart, reviewEnd, pamMode) {
       if (targetGuidePos < 1 || targetGuidePos > 20) return;
       if (guideSeq[targetGuidePos - 1] !== targetEditableBase) return;
-      const editablePositions = [];
-      for (let p = winStart; p <= winEnd; p += 1) editablePositions.push(p);
-      const bystanders = editablePositions.filter((p) => p !== targetGuidePos && guideSeq[p - 1] === targetEditableBase).length;
+      const outcomeAnalysis = analyzeBaseEditingOutcomes(route, strand, refStart, guideSeq, targetGuidePos, targetEditableBase, winStart, winEnd, reviewStart, reviewEnd);
       const windowSeq = guideSeq.slice(winStart - 1, winEnd);
+      const reviewWindowSeq = guideSeq.slice(reviewStart - 1, reviewEnd);
       const quality = pamQuality(pam, pamMode, strand);
       const id = `${strand}:${refStart}:${guideSeq}:${pam}`;
       if (seen && seen.has(id)) return;
@@ -3487,7 +3653,18 @@
         targetInWindow: targetGuidePos >= winStart && targetGuidePos <= winEnd,
         windowRange: `${winStart}-${winEnd}`,
         windowSeq,
-        bystanders,
+        coreWindowRange: `${winStart}-${winEnd}`,
+        reviewWindowRange: `${reviewStart}-${reviewEnd}`,
+        reviewWindowSeq,
+        coreBystanders: outcomeAnalysis.coreBystanderPositions.length,
+        bystanders: outcomeAnalysis.bystanderPositions.length,
+        bystanderPositions: outcomeAnalysis.bystanderPositions,
+        bystanderConsequences: outcomeAnalysis.consequences,
+        combinedConsequences: outcomeAnalysis.combinedConsequences,
+        unintendedCombinedConsequences: outcomeAnalysis.unintendedCombined,
+        bystanderRiskScore: outcomeAnalysis.bystanderRiskScore,
+        hasNonsynonymousBystander: outcomeAnalysis.hasNonsynonymousBystander,
+        bystanderSummary: outcomeAnalysis.summary,
         pamQuality: quality,
         targetEditableBase,
         editedCodon: route.desiredCodon
@@ -3557,11 +3734,15 @@
       if (effectivePam === "NGN") construct += "-SpG";
       if (effectivePam === "NNN") construct += "-SpRY";
       const pam = effectivePam === "AUTO" ? "Ranked across compatible PAM presets" : pamModeLabel(effectivePam);
+      const reviewWindow = activeReviewWindow();
       const notes = [];
       notes.push(route.editor === "CBE" ? "Use a cytosine base editor for this route." : "Use an adenine base editor for this route.");
-      notes.push(`Activity preset: ${preset.label}, positions ${Number(els.windowStart.value)}-${Number(els.windowEnd.value)}. ${preset.note}`);
+      notes.push(`Activity preset: ${preset.label}; target core ${Number(els.windowStart.value)}-${Number(els.windowEnd.value)}; extended bystander review ${reviewWindow.start}-${reviewWindow.end}. ${preset.note}`);
       if (effectivePam !== "NGG") notes.push("Use a Cas variant matching the PAM preset used for the top-ranked guide.");
-      if (guide && guide.bystanders > 0) notes.push("Review same-base bystanders in the editing window before ordering.");
+      if (guide && guide.bystanders > 0) notes.push(`Review extended-window outcomes before ordering: ${guide.bystanderSummary || `${guide.bystanders} possible bystander(s)`}`);
+      if (guide && guide.hasNonsynonymousBystander) notes.push("Use amplicon sequencing to resolve intended, partial, and combined edited haplotypes; a target-specific TaqMan assay alone will not distinguish every bystander outcome.");
+      const deliveryWarning = guideDeliveryWarning(guide);
+      if (deliveryWarning) notes.push(deliveryWarning);
       if (edge) notes.push("The target sits near the window edge; consider a shifted or broader/narrower editor variant if efficiency or precision is a concern.");
       notes.push("Confirm current plasmid availability and exact Addgene plasmid IDs before ordering.");
       return { construct, pam, notes: notes.join(" ") };
@@ -3731,11 +3912,11 @@
     }
 
     function beDesignerWindowStart() {
-      return Number(els.windowStart.value || "4") + 9;
+      return activeReviewWindow().start + 9;
     }
 
     function beDesignerWindowEnd() {
-      return Number(els.windowEnd.value || "8") + 9;
+      return activeReviewWindow().end + 9;
     }
 
     async function runAutomatedCrosscheck() {
@@ -3963,7 +4144,7 @@
         title: "Guide selection",
         text: guide
           ? usesBaseEditingFlow()
-            ? `Guide ${guide.guideSeq}, PAM ${guide.pam}, guide strand ${guide.strand}, target at protospacer position ${guide.targetGuidePos}, window ${guide.windowRange}, ${guide.bystanders} same-base bystander(s).`
+            ? `Guide ${guide.guideSeq}, PAM ${guide.pam}, guide strand ${guide.strand}, target at protospacer position ${guide.targetGuidePos}, core ${guide.coreWindowRange || guide.windowRange}, extended review ${guide.reviewWindowRange || guide.windowRange}. ${guide.bystanderSummary || `${guide.bystanders} possible bystander(s).`}`
             : `Candidate ${guide.guideSeq}, PAM ${guide.pam}, strand ${guide.strand}, ${guide.windowRange}, ${guide.notes || "review candidate details before ordering"}.`
           : "No guide is selected."
       });
@@ -4027,7 +4208,7 @@
           { value: "crRNA + tracrRNA", label: "crRNA + tracrRNA" },
           { value: "synthetic sgRNA", label: "synthetic sgRNA" },
           { value: "U6 sgRNA expression plasmid", label: "U6 sgRNA expression plasmid" }
-        ], "synthetic sgRNA", false);
+        ], "synthetic sgRNA", true);
         setSelectOptions(els.editorFormat, [
           { value: "mRNA", label: "mRNA" },
           { value: "plasmid", label: "plasmid" },
@@ -4424,7 +4605,7 @@
         return `Order one synthetic sgRNA using target/protospacer ${guide.guideSeq}; vendor should add the sgRNA scaffold; do not include PAM ${guide.pam}.`;
       }
       if (record.deliveryMethod === "U6 sgRNA expression plasmid") {
-        return `Use protospacer ${guide.guideSeq} for U6 sgRNA cloning/expression; do not include PAM ${guide.pam}; confirm vector-specific overhangs and any leading G requirement.`;
+        return `Use protospacer ${guide.guideSeq} for U6 sgRNA cloning/expression; do not include PAM ${guide.pam}; confirm vector-specific overhangs and any leading G requirement.${guide.guideSeq.includes("TTTT") ? " WARNING: this protospacer contains TTTT, which may terminate Pol III/U6 transcription." : ""}`;
       }
       return `Order crRNA with guide/protospacer ${guide.guideSeq}; do not include PAM ${guide.pam}; pair with compatible universal tracrRNA.`;
     }
@@ -4789,7 +4970,7 @@
       els.editorPresetWrap.hidden = !usesBaseEditingFlow();
       els.windowFields.hidden = !usesBaseEditingFlow();
       els.guidesSubtitle.textContent = usesBaseEditingFlow()
-        ? "Candidate protospacers scored by target position and same-base bystanders inside the chosen window."
+        ? "The intended base must fall in the core window; ranking also evaluates individual and combined outcomes across a broader bystander-review window."
         : strategy === "prime_editing"
           ? "Spacer candidates ranked by how close their cut/nick position falls to the target codon for handoff into pegRNA design."
           : strategy === "nuclease_indel"
@@ -4799,10 +4980,10 @@
       els.targetPosHeader.textContent = usesBaseEditingFlow() ? "Target pos" : strategy === "paired_guide_deletion" ? "Deletion span" : strategy === "nuclease_indel" ? "Disruption score" : "Cut distance";
       els.windowHeader.textContent = usesBaseEditingFlow() ? "Window" : strategy === "paired_guide_deletion" ? "Cut sites" : "Cut site";
       els.codonHeader.textContent = usesBaseEditingFlow() ? "Codon edit" : "Strategy action";
-      els.bystanderHeader.textContent = usesBaseEditingFlow() ? "Bystanders" : strategy === "paired_guide_deletion" ? "Confidence" : strategy === "nuclease_indel" ? "Confidence" : "Priority";
+      els.bystanderHeader.textContent = usesBaseEditingFlow() ? "Extended bystanders" : strategy === "paired_guide_deletion" ? "Confidence" : strategy === "nuclease_indel" ? "Confidence" : "Priority";
       els.windowSummary.textContent = state.selectedRoute
         ? usesBaseEditingFlow()
-          ? `${preset.label}: using guide positions ${Number(els.windowStart.value)}-${Number(els.windowEnd.value)}. ${preset.note}`
+          ? `${preset.label}: target core ${Number(els.windowStart.value)}-${Number(els.windowEnd.value)}; extended bystander review ${activeReviewWindow().start}-${activeReviewWindow().end}. ${preset.note}`
           : strategy === "prime_editing"
             ? els.pamMode.value === "AUTO"
             ? "Prime editing spacer mode: MUTATR is surveying NGG, broader NGN, and SpRY-like relaxed PAM presets, then ranking the candidate spacers best to worst. The base-editing window controls are intentionally hidden here."
@@ -4817,7 +4998,7 @@
         : "Activity window or guide strategy will be chosen after route definition.";
       els.guideRows.innerHTML = state.guides.length ? state.guides.map((guide, index) => {
         const byClass = usesBaseEditingFlow()
-          ? guide.bystanders === 0 ? "good" : guide.bystanders <= 1 ? "warn" : "bad"
+          ? guide.bystanders === 0 ? "good" : guide.hasNonsynonymousBystander ? "bad" : "warn"
           : guide.priority && guide.priority.startsWith("high")
             ? "good"
             : guide.priority && guide.priority.startsWith("moderate")
@@ -4826,9 +5007,13 @@
         const quality = guide.pamQuality || pamQuality(guide.pam, els.pamMode.value, guide.strand);
         const guideCasLabel = casPresetLabel(guide.leftGuide?.pamModeUsed || guide.pamModeUsed || els.pamMode.value);
         const bystanderNote = usesBaseEditingFlow()
-          ? guide.bystanders === 0 ? "clean window" : `${guide.bystanders} same-base bystander${guide.bystanders === 1 ? "" : "s"}`
+          ? guide.bystanderSummary || (guide.bystanders === 0 ? "clean extended review window" : `${guide.bystanders} extended-window bystander${guide.bystanders === 1 ? "" : "s"}`)
           : `${cleanGuideNoteForDisplay(guide.notes || "") || `GC ${guide.gc || "-"}%`}`;
-        const note = els.pamMode.value === "NNN" ? `${bystanderNote}; ${quality.detail}` : bystanderNote;
+        const deliveryWarning = usesBaseEditingFlow() ? guideDeliveryWarning(guide) : "";
+        const noteParts = [bystanderNote];
+        if (deliveryWarning) noteParts.push(deliveryWarning);
+        if (els.pamMode.value === "NNN") noteParts.push(quality.detail);
+        const note = noteParts.join(" ");
         const selected = state.selectedGuide && guide.id === state.selectedGuide.id;
         return `<tr class="${selected ? "selected" : ""}" data-guide-id="${guide.id}">
           <td><input type="radio" name="guide" value="${guide.id}" ${selected ? "checked" : ""}></td>
@@ -4839,7 +5024,7 @@
           <td>${escapeHtml(guideCasLabel)}</td>
           <td>${guide.strand}</td>
           <td>${strategy === "nuclease_indel" ? Math.round(guide.disruptionScore || 0) : guide.targetGuidePos}</td>
-          <td>${guide.windowRange} <span class="mono">${escapeHtml(guide.windowSeq)}</span></td>
+          <td>core ${guide.coreWindowRange || guide.windowRange} <span class="mono">${escapeHtml(guide.windowSeq)}</span><br>review ${guide.reviewWindowRange || guide.windowRange} <span class="mono">${escapeHtml(guide.reviewWindowSeq || guide.windowSeq)}</span></td>
           <td>${codonChangeHtml(guide)}</td>
           <td><span class="pill ${byClass}">${escapeHtml(strategy === "nuclease_indel" ? (guide.priority || "-") : strategy === "paired_guide_deletion" ? (guide.priority || "-") : String(guide.bystanders))}</span></td>
           <td>${note}</td>
@@ -4851,8 +5036,8 @@
       els.guideState.className = `pill ${state.selectedGuide ? "good" : state.guides.length ? "warn" : ""}`;
       els.selectedGuideEdit.innerHTML = state.selectedGuide
         ? usesBaseEditingFlow()
-          ? `<div><b>Selected guide</b><span class="mono">${escapeHtml(state.selectedGuide.guideSeq)}</span><br><span>PAM <span class="mono">${escapeHtml(state.selectedGuide.pam)}</span>; ${escapeHtml((state.selectedGuide.pamQuality || pamQuality(state.selectedGuide.pam, els.pamMode.value, state.selectedGuide.strand)).label)}; ${escapeHtml(casPresetLabel(state.selectedGuide.pamModeUsed || els.pamMode.value))}; strand ${state.selectedGuide.strand}; target position ${state.selectedGuide.targetGuidePos}</span></div>
-          <div><b>Codon edit</b>${codonChangeHtml(state.selectedGuide)}<br><span>${state.selectedGuide.route.codingChange}; ${state.selectedGuide.route.refCodon}=${geneticCode[state.selectedGuide.route.refCodon]}, ${state.selectedGuide.route.desiredCodon}=${geneticCode[state.selectedGuide.route.desiredCodon]}</span><br><span>${escapeHtml(guideSelectionRationale(state.selectedGuide))}</span></div>`
+          ? `<div><b>Selected guide</b><span class="mono">${escapeHtml(state.selectedGuide.guideSeq)}</span><br><span>PAM <span class="mono">${escapeHtml(state.selectedGuide.pam)}</span>; ${escapeHtml((state.selectedGuide.pamQuality || pamQuality(state.selectedGuide.pam, els.pamMode.value, state.selectedGuide.strand)).label)}; ${escapeHtml(casPresetLabel(state.selectedGuide.pamModeUsed || els.pamMode.value))}; strand ${state.selectedGuide.strand}; target position ${state.selectedGuide.targetGuidePos}; core ${escapeHtml(state.selectedGuide.coreWindowRange || state.selectedGuide.windowRange)}; review ${escapeHtml(state.selectedGuide.reviewWindowRange || state.selectedGuide.windowRange)}</span></div>
+          <div><b>Codon edit and bystanders</b>${codonChangeHtml(state.selectedGuide)}<br><span>${state.selectedGuide.route.codingChange}; ${state.selectedGuide.route.refCodon}=${geneticCode[state.selectedGuide.route.refCodon]}, ${state.selectedGuide.route.desiredCodon}=${geneticCode[state.selectedGuide.route.desiredCodon]}</span><br><span>${escapeHtml(state.selectedGuide.bystanderSummary || "No extended-window bystander analysis available.")}</span>${guideDeliveryWarning(state.selectedGuide) ? `<br><span>${escapeHtml(guideDeliveryWarning(state.selectedGuide))}</span>` : ""}<br><span>${escapeHtml(guideSelectionRationale(state.selectedGuide))}</span></div>`
           : `<div><b>${strategy === "nuclease_indel" ? "Best disruption guide" : "Selected candidate"}</b><span class="mono">${escapeHtml(state.selectedGuide.guideSeq)}</span><br><span>PAM <span class="mono">${escapeHtml(state.selectedGuide.pam)}</span>; ${escapeHtml(casPresetLabel(state.selectedGuide.leftGuide?.pamModeUsed || state.selectedGuide.pamModeUsed || els.pamMode.value))}; strand ${state.selectedGuide.strand}; ${escapeHtml(state.selectedGuide.notes || "")}</span></div>
           <div><b>${strategy === "nuclease_indel" ? "Disruption rationale" : "Strategy action"}</b>${codonChangeHtml(state.selectedGuide)}<br><span>${escapeHtml(state.selectedGuide.windowRange)}; ${escapeHtml(state.selectedGuide.route.codingChange)}${state.selectedGuide.pamModeUsed ? `; ${escapeHtml(pamModeLabel(state.selectedGuide.pamModeUsed))}` : ""}${strategy === "nuclease_indel" ? `; ${escapeHtml(state.selectedGuide.priority || "")}` : ""}</span><br><span>${escapeHtml(guideSelectionRationale(state.selectedGuide))}</span></div>`
         : `<div><b>Selected guide</b><span>Select a guide to preview the order sequence.</span></div><div><b>Codon edit</b><span>-</span></div>`;
@@ -4863,7 +5048,7 @@
       } else {
         els.guideNotes.textContent = usesBaseEditingFlow()
           ? els.pamMode.value === "AUTO"
-            ? `Guides are ranked best to worst across compatible PAM presets. MUTATR auto-selected rank #1${state.selectedGuide ? ` (${state.selectedGuide.guideSeq})` : ""}${state.selectedGuide && state.selectedGuide.pamModeUsed ? ` from ${pamModeLabel(state.selectedGuide.pamModeUsed)}` : ""}, and you can still choose any lower-ranked guide manually.`
+            ? `Guides are ranked best to worst across compatible PAM presets using extended-window amino-acid consequences, PAM compatibility, and target placement. MUTATR auto-selected rank #1${state.selectedGuide ? ` (${state.selectedGuide.guideSeq})` : ""}${state.selectedGuide && state.selectedGuide.pamModeUsed ? ` from ${pamModeLabel(state.selectedGuide.pamModeUsed)}` : ""}, and you can still choose any lower-ranked guide manually.`
             : els.pastedStrand.value === "genomic_plus" && els.geneStrand.value === "-"
             ? "Guides are ranked best to worst. This minus-strand gene was converted to coding-strand context before scanning. Guides are still order-ready 20 nt protospacers with no PAM; strand labels are relative to the coding context shown above."
             : els.pamMode.value === "NNN"
@@ -5038,8 +5223,9 @@
         }
         return lines.join("\n");
       }
-      const beDesignerStart = preset.start + 9;
-      const beDesignerEnd = preset.end + 9;
+      const reviewWindow = activeReviewWindow();
+      const beDesignerStart = reviewWindow.start + 9;
+      const beDesignerEnd = reviewWindow.end + 9;
       const pamName = els.pamMode.value === "NGG" ? "SpCas9 NGG" : els.pamMode.value === "NGN" ? "SpG NGN" : "SpRY / relaxed NNN";
       const editableBase = route ? (route.editStrand === "coding" ? route.from : revComp(route.from)) : "-";
       const lines = [];
@@ -5054,7 +5240,7 @@
       lines.push(`3. Select base editor type: ${route ? route.editor : "-"}.`);
       lines.push(`4. Select PAM/Cas option matching: ${pamName}.`);
       lines.push(`5. In BE-Designer, enter editing window ${beDesignerStart}-${beDesignerEnd}.`);
-      lines.push(`   This corresponds to guide/protospacer positions ${preset.start}-${preset.end} in this tool.`);
+      lines.push(`   This corresponds to MUTATR's extended bystander-review positions ${reviewWindow.start}-${reviewWindow.end}; the intended target is still prioritized in core positions ${Number(els.windowStart.value)}-${Number(els.windowEnd.value)}.`);
       lines.push("6. Run the design.");
       lines.push("7. In the output, look for the guide/protospacer and PAM listed below.");
       lines.push("");
@@ -5075,12 +5261,14 @@
       lines.push(`Target base should be at guide position: ${guide ? guide.targetGuidePos : "-"}`);
       lines.push(`PAM setting to try: ${pamName}`);
       lines.push(`Editor/window preset: ${preset.label}`);
-      lines.push(`This tool's guide-position window: ${preset.start}-${preset.end}`);
+      lines.push(`MUTATR target core: ${Number(els.windowStart.value)}-${Number(els.windowEnd.value)}`);
+      lines.push(`MUTATR extended bystander-review window: ${reviewWindow.start}-${reviewWindow.end}`);
       lines.push(`BE-Designer window to enter: ${beDesignerStart}-${beDesignerEnd}`);
       lines.push(`Selected guide from this tool: ${guide ? guide.guideSeq : "-"}`);
       lines.push(`Selected PAM from this tool: ${guide ? guide.pam : "-"}`);
       lines.push(`PAM quality: ${guide && guide.pamQuality ? `${guide.pamQuality.label}; ${guide.pamQuality.detail}` : "-"}`);
-      lines.push(`Same-base bystanders in this tool: ${guide ? guide.bystanders : "-"}`);
+      lines.push(`Extended-window bystanders in this tool: ${guide ? guide.bystanders : "-"}`);
+      lines.push(`Predicted bystander outcomes: ${guide ? guide.bystanderSummary || "-" : "-"}`);
       lines.push("");
       lines.push("HOW TO CHECK THE BE-DESIGNER OUTPUT");
       lines.push(`- Confirm BE-Designer reports the same 20 nt guide: ${guide ? guide.guideSeq : "-"}.`);
@@ -5548,8 +5736,11 @@
         lines.push(`Guide strand: ${guide.strand}`);
         if (usesBaseEditingFlow()) {
           lines.push(`Target base position in protospacer: ${guide.targetGuidePos}`);
-          lines.push(`Editing window used: ${guide.windowRange}`);
-          lines.push(`Same-base bystanders in window: ${guide.bystanders}`);
+          lines.push(`Core target window: ${guide.coreWindowRange || guide.windowRange}`);
+          lines.push(`Extended bystander-review window: ${guide.reviewWindowRange || guide.windowRange}`);
+          lines.push(`Extended-window bystanders: ${guide.bystanders}`);
+          lines.push(`Predicted individual/combined outcomes: ${guide.bystanderSummary || "-"}`);
+          lines.push(`Delivery-specific sequence note: ${guideDeliveryWarning(guide) || "none"}`);
         } else if (record.editingStrategy === "nuclease_indel") {
           lines.push(`Cut site: ${guide.windowRange}`);
           lines.push(`Disruption score: ${Math.round(guide.disruptionScore || 0)}`);
@@ -5572,7 +5763,7 @@
       lines.push("## CRISPR Reagents");
       lines.push(`Construct family: ${record.editorRecommendation.construct}`);
       lines.push(`PAM compatibility: ${record.editorRecommendation.pam}`);
-      if (usesBaseEditingFlow()) lines.push(`Editor activity preset: ${record.editorPreset.label} (${record.editorPreset.start}-${record.editorPreset.end})`);
+      if (usesBaseEditingFlow()) lines.push(`Editor activity preset: ${record.editorPreset.label}; core ${record.editorPreset.start}-${record.editorPreset.end}; extended review ${guide ? guide.reviewWindowRange || "-" : "-"}`);
       lines.push(`Guide delivery: ${record.deliveryMethod}`);
       lines.push(`Guide order instructions: ${guideOrderInstructions(record)}`);
       lines.push(`Editor format: ${record.editorFormat}`);
@@ -5856,7 +6047,9 @@ Selected guide/protospacer, no PAM: ${record.selectedGuide ? record.selectedGuid
 PAM: ${record.selectedGuide ? record.selectedGuide.pam : "-"}
 PAM quality: ${record.selectedGuide && record.selectedGuide.pamQuality ? `${record.selectedGuide.pamQuality.label} (${record.selectedGuide.pamQuality.detail})` : "-"}
 Codon edit: ${record.selectedRoute ? `${record.editingStrategy === "base_editing" ? `${record.selectedRoute.refCodon} to ${record.selectedRoute.desiredCodon}` : routeDisplayLabel(record.selectedRoute)}; ${record.selectedRoute.codingChange}` : "-"}
-Bystanders in window: ${record.selectedGuide ? record.selectedGuide.bystanders : "-"}
+Core target window: ${record.selectedGuide ? record.selectedGuide.coreWindowRange || record.selectedGuide.windowRange : "-"}
+Extended bystander-review window: ${record.selectedGuide ? record.selectedGuide.reviewWindowRange || record.selectedGuide.windowRange : "-"}
+Predicted bystander outcomes: ${record.selectedGuide ? record.selectedGuide.bystanderSummary || "-" : "-"}
 
 Could you advise on feasibility, required input material/template, scale options, QC, turnaround time, storage/aliquoting recommendations, and approximate cost?
 
@@ -5923,9 +6116,13 @@ Ian Mantel`;
         ["PAM quality", guide && guide.pamQuality ? `${guide.pamQuality.label} - ${guide.pamQuality.detail}` : "-"],
         ["Guide strand", guide ? guide.strand : "-"],
         ["Target guide position", guide ? String(guide.targetGuidePos) : "-"],
-        ["Window", guide ? guide.windowRange : "-"],
-        ["Window sequence", guide ? guide.windowSeq : "-"],
-        ["Bystanders", guide ? String(guide.bystanders) : "-"],
+        ["Core target window", guide ? guide.coreWindowRange || guide.windowRange : "-"],
+        ["Core window sequence", guide ? guide.windowSeq : "-"],
+        ["Extended bystander-review window", guide ? guide.reviewWindowRange || guide.windowRange : "-"],
+        ["Extended review sequence", guide ? guide.reviewWindowSeq || guide.windowSeq : "-"],
+        ["Extended-window bystanders", guide ? String(guide.bystanders) : "-"],
+        ["Predicted bystander outcomes", guide ? guide.bystanderSummary || "-" : "-"],
+        ["Delivery-specific sequence warning", guide ? guideDeliveryWarning(guide) || "-" : "-"],
         ["Disruption score", guide && guide.disruptionScore != null ? String(Math.round(guide.disruptionScore)) : "-"],
         ["Disruption confidence", guide ? guide.priority || "-" : "-"],
         ["Top-guide rationale", guide ? guide.notes || "-" : "-"],
@@ -6597,7 +6794,7 @@ Ian Mantel`;
         renderAll();
       } else {
         els.guideNotes.textContent = usesBaseEditingFlow()
-          ? "No guides were found that satisfy the current editor preset, PAM mode, and editing window. Try a broader PAM mode, a different editor preset, or verify the reference context."
+          ? "No guides were found that place the target inside the current core window with this editor preset and PAM mode. Try a broader PAM mode, a different editor preset/core window, or verify the reference context."
           : `No ${strategyLabel(currentStrategy()).toLowerCase()} candidates were found with the current PAM mode in this local context. Try a broader PAM mode or verify the reference context around the codon.`;
         renderAll();
       }
